@@ -69,7 +69,6 @@ axes[1].pie(class_counts.values, labels=['Ham', 'Spam'], autopct='%1.1f%%',
 axes[1].set_title('Email Class Proportion', fontsize=14, fontweight='bold')
 
 plt.tight_layout()
-# plt.savefig(os.path.join(OUTPUT_DIR, 'email_class_distribution.png'), dpi=150)
 plt.close()
 print("Observation: Dataset is imbalanced — ~76% Ham vs ~24% Spam.")
 
@@ -99,7 +98,6 @@ axes[1].set_ylabel('Frequency')
 axes[1].legend()
 
 plt.tight_layout()
-# plt.savefig(os.path.join(OUTPUT_DIR, 'email_text_length_analysis.png'), dpi=150)
 plt.close()
 print("Observation: Spam emails tend to be shorter on average than ham emails.")
 
@@ -177,15 +175,11 @@ print("\n--- Saving Preprocessed Email Data ---")
 
 from scipy import sparse
 
-# Save TF-IDF sparse matrix
 sparse.save_npz(os.path.join(OUTPUT_DIR, 'email_tfidf_features.npz'), X_email_tfidf)
-# Save target labels
 np.save(os.path.join(OUTPUT_DIR, 'email_labels.npy'), y_email)
-# Save cleaned text CSV (useful for deep learning later)
 email_df[['processed_text', 'spam']].to_csv(
     os.path.join(OUTPUT_DIR, 'emails_cleaned.csv'), index=False
 )
-# Save TF-IDF vectorizer feature names for later use
 pd.Series(tfidf.get_feature_names_out()).to_csv(
     os.path.join(OUTPUT_DIR, 'email_tfidf_feature_names.csv'), index=False
 )
@@ -202,18 +196,15 @@ print(f"\nFirst 5 rows:\n{url_df.head()}")
 
 # Data Cleaning
 print("\n--- Data Cleaning ---")
-# Drop rows where label is missing
 if 'label' in url_df.columns:
     initial_len = len(url_df)
     url_df = url_df.dropna(subset=['label'])
     print(f"Dropped {initial_len - len(url_df)} rows with missing labels.")
     
-    # Drop domain column since it's text and we want numerical features
     if 'domain' in url_df.columns:
         url_df = url_df.drop(columns=['domain'])
         print("Dropped 'domain' column.")
     
-    # Ensure label is int
     url_df['label'] = url_df['label'].astype(int)
 
 # Coerce all other columns to numeric
@@ -221,19 +212,16 @@ for col in url_df.columns:
     if col != 'label':
         url_df[col] = pd.to_numeric(url_df[col], errors='coerce')
 
-# Impute remaining missing values with median
 missing_before = url_df.isnull().sum().sum()
 url_df = url_df.fillna(url_df.median())
 missing_after = url_df.isnull().sum().sum()
 print(f"Imputed {missing_before - missing_after} missing values with median.")
 
-# Convert to Binary Classification
 print("\n--- Converting to Binary Classification ---")
 print("Mapping in urlset.csv: 1 (Phishing) -> 0 (Malicious)")
 print("                       0 (Legitimate) -> 1 (Safe)")
 
 url_df['Result_binary'] = url_df['label'].apply(lambda x: 0 if x == 1 else 1)
-# Drop the original label
 url_df = url_df.drop(columns=['label'])
 
 binary_counts = url_df['Result_binary'].value_counts()
