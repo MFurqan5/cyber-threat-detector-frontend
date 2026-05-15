@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  /* Smooth color transitions across the whole app */
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* Scrollbar — uses CSS var set by ThemeContext */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, rgba(76,201,240,0.3));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { opacity: 0.7; }
+
+/* Font families */
+.font-display { font-family: 'Space Grotesk', sans-serif; }
+.font-body    { font-family: 'Inter', sans-serif; }
+
+/* Orb float animation */
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(30px, -30px) scale(1.05); }
+  66%       { transform: translate(-20px, 20px) scale(0.95); }
+}
+.orb-animate { animation: orbFloat 10s ease-in-out infinite; }
+
+/* Pulsing dot */
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* Spin */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Typing cursor blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.cursor-blink::after {
+  content: '|';
+  animation: blink 1s step-start infinite;
+  color: var(--accent, #4cc9f0);
+}
+
+/* Global transition for theme switching on common elements */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 0.35s;
+  transition-timing-function: ease;
+}
+
+/* Don't animate transforms (breaks motion) */
+.orb-animate, [style*="animation"], button, a {
+  transition-property: background-color, border-color, color, box-shadow, opacity, transform;
+}
+
+/* Recharts axis labels pick up theme */
+.recharts-text {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 11px !important;
+}
