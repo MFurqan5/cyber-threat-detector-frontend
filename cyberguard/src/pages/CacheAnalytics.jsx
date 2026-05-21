@@ -15,22 +15,34 @@ const CacheAnalytics = () => {
   const [error, setError] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const demo = {
-    l1: { hit_rate: 0.82, hits: 8420, misses: 1840 },
-    l2: { hit_rate: 0.71, hits: 7280, misses: 2960 },
-    l3: { hit_rate: 0.58, hits: 5940, misses: 4300 },
+  // REMOVED: demo dummy data - now using empty data as fallback
+  const emptyData = {
+    l1: { hit_rate: 0, hits: 0, misses: 0 },
+    l2: { hit_rate: 0, hits: 0, misses: 0 },
+    l3: { hit_rate: 0, hits: 0, misses: 0 },
   }
 
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
-    try { setCacheData(await getCacheStatus()) }
-    catch (err) { setError(err.message); setCacheData(demo) }
-    finally { setLoading(false); setRefreshing(false) }
+    try {
+      const data = await getCacheStatus()
+      console.log('Cache data from API:', data)
+      setCacheData(data)
+      setError(null)
+    } catch (err) {
+      console.error('Error loading cache status:', err)
+      setError(err.message)
+      // Use empty data instead of demo data
+      setCacheData(emptyData)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
   }
 
   useEffect(() => { load() }, [])
 
-  const d = cacheData || demo
+  const d = cacheData || emptyData
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null
@@ -85,8 +97,23 @@ const CacheAnalytics = () => {
     misses: d[l.key]?.misses || 0,
   }))
 
-  const overallRequests = (d.l1?.hits + d.l1?.misses) || 0
-  const overallHitRate = overallRequests > 0 ? Math.round((d.l1?.hits / overallRequests) * 100) : 0
+  // Calculate real totals from actual data (not just L1)
+  const totalHits = (d.l1?.hits || 0) + (d.l2?.hits || 0) + (d.l3?.hits || 0)
+  const totalMisses = (d.l1?.misses || 0) + (d.l2?.misses || 0) + (d.l3?.misses || 0)
+  const totalRequests = totalHits + totalMisses
+  const overallHitRate = totalRequests > 0 ? Math.round((totalHits / totalRequests) * 100) : 0
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-2 border-transparent mx-auto mb-4"
+            style={{ borderTopColor: theme.accent, animation: 'spin 0.8s linear infinite' }} />
+          <p className="text-sm" style={{ color: theme.textMuted }}>Loading cache statistics...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -94,9 +121,12 @@ const CacheAnalytics = () => {
         <div>
           <h1 className="text-2xl font-bold font-display" style={{ color: theme.textPrimary }}>Cache Analytics</h1>
           <p className="text-sm mt-1 font-body" style={{ color: theme.textMuted }}>Multi-layer cache performance monitoring</p>
-          {error && <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
-            style={{ background: `${theme.warning}10`, border: `1px solid ${theme.warning}28`, color: theme.warning }}>
-            ⚠ Backend offline — showing demo data</div>}
+          {error && (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+              style={{ background: `${theme.warning}10`, border: `1px solid ${theme.warning}28`, color: theme.warning }}>
+              ⚠ {error}
+            </div>
+          )}
         </div>
         <button onClick={() => load(true)} disabled={refreshing}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all hover:opacity-70"
@@ -105,13 +135,13 @@ const CacheAnalytics = () => {
         </button>
       </div>
 
-      {/* Overview */}
+      {/* Overview Stats - Using REAL calculated values */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Overall Hit Rate', value: `${overallHitRate}%`, color: theme.accent },
-          { label: 'Total Requests', value: overallRequests.toLocaleString(), color: theme.accent },
-          { label: 'Total Cache Hits', value: ((d.l1?.hits || 0) + (d.l2?.hits || 0) + (d.l3?.hits || 0)).toLocaleString(), color: theme.safe },
-          { label: 'Avg Response', value: '0.8ms', color: theme.warning },
+          { label: 'Total Requests', value: totalRequests.toLocaleString(), color: theme.accent },
+          { label: 'Total Cache Hits', value: totalHits.toLocaleString(), color: theme.safe },
+          { label: 'Total Cache Misses', value: totalMisses.toLocaleString(), color: theme.danger },
         ].map(({ label, value, color }, i) => (
           <motion.div key={label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
             className="rounded-xl p-4"
@@ -122,7 +152,7 @@ const CacheAnalytics = () => {
         ))}
       </div>
 
-      {/* Layer cards */}
+      {/* Layer cards - Shows REAL data from Redis and MongoDB */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {layers.map(({ key, label, color, icon: Icon, sublabel }, idx) => {
           const c = d[key] || {}
@@ -169,7 +199,7 @@ const CacheAnalytics = () => {
         })}
       </div>
 
-      {/* Charts */}
+      {/* Charts - Shows REAL data */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <GlassCard className="p-5">
           <SectionHeader title="Hits vs Misses" subtitle="Per cache layer" />
