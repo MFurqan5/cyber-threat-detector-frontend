@@ -1,19 +1,20 @@
 import React, { createContext, useContext, useState } from 'react'
+import { getCookie, setCookie, eraseCookie } from '../services/api'
 
 const AuthContext = createContext()
 
 export const useAuth = () => useContext(AuthContext)
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem('cg-token'))
+  const [token, setToken] = useState(() => getCookie('cg-token'))
 
   const login = (accessToken) => {
-    localStorage.setItem('cg-token', accessToken)
+    setCookie('cg-token', accessToken, 7) // expires in 7 days
     setToken(accessToken)
   }
 
   const logout = () => {
-    localStorage.removeItem('cg-token')
+    eraseCookie('cg-token')
     setToken(null)
   }
 

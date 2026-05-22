@@ -5,7 +5,7 @@ import {
   ChevronDown, Filter, Download, FileText,
   FileSpreadsheet, Calendar, X,
 } from 'lucide-react'
-import { getHistory } from '../services/api'
+import { getHistory, healthCheck } from '../services/api'
 import { GlassCard, StatusPill, SecondaryButton } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
 
@@ -156,9 +156,9 @@ const ScanHistory = () => {
   const [endDate, setEndDate] = useState('')
   const [exporting, setExporting] = useState(null) // 'pdf' | 'excel' | null
 
-    // Find this function in ScanHistory.jsx and replace it:
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getHistory(100, 0);
       console.log('Loaded history:', data);
@@ -166,18 +166,14 @@ const ScanHistory = () => {
       if (data && data.records && data.records.length > 0) {
         setRecords(data.records.map(r => ({ ...r, _date: new Date(r.timestamp) })));
       } else {
-        // Only show demo if no data AND backend is unreachable
-        const isBackendReachable = await healthCheck().then(() => true).catch(() => false);
-        if (!isBackendReachable) {
-          setRecords(generateFallback());
-        } else {
-          setRecords([]);
-        }
+        // Empty history from backend, show empty list
+        setRecords([]);
       }
     } catch (err) {
       console.error('Error loading history:', err);
       setError(err.message);
-      setRecords([]); // Empty array, no demo data
+      // Fallback to demo data on connection/api error
+      setRecords(generateFallback());
     } finally {
       setLoading(false);
     }

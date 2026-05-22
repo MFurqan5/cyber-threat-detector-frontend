@@ -1,6 +1,28 @@
 import axios from 'axios'
 
-const BASE_URL = 'http://localhost:8000'
+// ─── Cookie Helpers ────────────────────────────────────────────────────────────
+export const getCookie = (name) => {
+  const value = `; ${document.cookie}`
+  const parts = value.split(`; ${name}=`)
+  if (parts.length === 2) return parts.pop().split(';').shift()
+  return null
+}
+
+export const setCookie = (name, value, days = 7) => {
+  let expires = ""
+  if (days) {
+    const date = new Date()
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000))
+    expires = "; expires=" + date.toUTCString()
+  }
+  document.cookie = `${name}=${value || ""}${expires}; path=/; SameSite=Lax`
+}
+
+export const eraseCookie = (name) => {
+  document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax`
+}
+
+const BASE_URL = getCookie('cg-backend-url') || 'http://localhost:8000'
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -13,6 +35,10 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+    const token = getCookie('cg-token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
   (error) => Promise.reject(error)
@@ -73,6 +99,13 @@ export const getHistory = (limit = 50, offset = 0) =>
  */
 export const getCacheStatus = () =>
   api.get('/cache/status')
+
+/**
+ * Check backend health status
+ * @returns {Promise<any>}
+ */
+export const healthCheck = () =>
+  api.get('/')
 
 export default api
 

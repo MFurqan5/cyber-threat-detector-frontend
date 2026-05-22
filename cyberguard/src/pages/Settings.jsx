@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Settings, Server, Database, Zap, Shield, Save, AlertCircle } from 'lucide-react'
 import { GlassCard, GlowButton } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
+import { getCookie, setCookie } from '../services/api'
 
 const Toggle = ({ value, onChange, label, description }) => {
   const { theme } = useTheme()
@@ -82,18 +83,30 @@ const SectionCard = ({ icon: Icon, iconColor, title, subtitle, children }) => {
 
 const SettingsPage = () => {
   const { theme } = useTheme()
-  const [s, setS] = useState({
-    backendUrl: 'http://localhost:8000',
-    l1Enabled: true, l2Enabled: true, l3Enabled: true,
-    l1MaxSize: '500', l2TTL: '3600', l3TTL: '86400',
-    urlModelEnabled: true, emailModelEnabled: true,
-    confidenceThreshold: '0.7',
-    autoRefresh: true, refreshInterval: '30', showDemoData: true,
+  const [s, setS] = useState(() => {
+    const saved = getCookie('cg-settings')
+    if (saved) {
+      try {
+        return JSON.parse(decodeURIComponent(saved))
+      } catch (e) {
+        console.error('Error parsing settings cookie:', e)
+      }
+    }
+    return {
+      backendUrl: getCookie('cg-backend-url') || 'http://localhost:8000',
+      l1Enabled: true, l2Enabled: true, l3Enabled: true,
+      l1MaxSize: '500', l2TTL: '3600', l3TTL: '86400',
+      urlModelEnabled: true, emailModelEnabled: true,
+      confidenceThreshold: '0.7',
+      autoRefresh: true, refreshInterval: '30', showDemoData: true,
+    }
   })
   const set = key => val => setS(p => ({ ...p, [key]: val }))
   const [saved, setSaved] = useState(false)
 
   const handleSave = () => {
+    setCookie('cg-backend-url', s.backendUrl, 30) // 30 days expiry
+    setCookie('cg-settings', encodeURIComponent(JSON.stringify(s)), 30)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
