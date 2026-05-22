@@ -49,7 +49,7 @@ const Signup = () => {
   const { theme } = useTheme()
   const { login } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -61,14 +61,22 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.name || !form.email || !form.password || !form.confirm) { setError('Please fill in all fields.'); return }
+    if (!form.username || !form.email || !form.password || !form.confirm) { setError('Please fill in all fields.'); return }
+    if (!/^[a-zA-Z0-9_-]+$/.test(form.username)) {
+      setError('Username can only contain alphanumeric characters, underscores, or hyphens (no spaces).');
+      return
+    }
+    if (form.username.length < 3 || form.username.length > 50) {
+      setError('Username must be between 3 and 50 characters.');
+      return
+    }
     if (form.password !== form.confirm) { setError('Passwords do not match.'); return }
     if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return }
     if (!agreed) { setError('Please accept the terms and conditions.'); return }
     setError('')
     setLoading(true)
     try {
-      const data = await registerUser(form.name, form.email, form.password)
+      const data = await registerUser(form.username, form.email, form.password)
       login(data.access_token)
       navigate('/')
     } catch (err) {
@@ -158,10 +166,10 @@ const Signup = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: theme.textMuted }}>Full name</label>
+                <label className="block text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: theme.textMuted }}>Username</label>
                 <div className="relative">
-                  <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: focusedField === 'name' ? theme.accent : theme.textMuted }} />
-                  <input type="text" placeholder="John Analyst" value={form.name} onChange={set('name')} onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField(null)} className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-body" style={inputStyle('name')} autoComplete="name" />
+                  <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: focusedField === 'username' ? theme.accent : theme.textMuted }} />
+                  <input type="text" placeholder="john_analyst" value={form.username} onChange={set('username')} onFocus={() => setFocusedField('username')} onBlur={() => setFocusedField(null)} className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-body" style={inputStyle('username')} autoComplete="username" />
                 </div>
               </div>
 

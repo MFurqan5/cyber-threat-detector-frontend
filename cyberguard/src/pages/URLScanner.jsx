@@ -48,9 +48,18 @@ const ScanAnimation = () => {
 
 const ResultCard = ({ result }) => {
   const { theme } = useTheme()
-  const isMalicious = result.prediction_label === 'malicious'
+  const isMalicious = result.prediction_label === 'malicious' || result.is_malicious === true
   const c = isMalicious ? theme.danger : theme.safe
-  const confidence = Math.round(result.confidence_score * 100)
+  
+  // Extract and format percentage
+  const pctStr = result.threat_percentage || (result.confidence !== undefined ? `${Math.round(result.confidence * 100)}%` : '0%')
+  const numericPercentage = parseFloat(pctStr) || 0
+  
+  // Extract threat level and status
+  const threatLevel = result.threat_level || (numericPercentage > 80 ? 'critical' : numericPercentage > 60 ? 'high' : numericPercentage > 40 ? 'medium' : 'low')
+  const status = result.status || result.threat_type || 'unknown'
+  const label = result.prediction_label || (isMalicious ? 'malicious' : 'safe')
+  
   return (
     <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.5 }} className="rounded-2xl p-6"
@@ -64,20 +73,22 @@ const ResultCard = ({ result }) => {
         </div>
         <div className="flex-1">
           <h3 className="text-xl font-bold font-display uppercase tracking-wider" style={{ color: c }}>
-            {result.prediction_label}
+            {label}
           </h3>
           <p className="text-sm" style={{ color: theme.textMuted }}>
-            Threat type: <span className="font-semibold" style={{ color: c }}>{result.threat_type}</span>
+            Status: <span className="font-semibold uppercase" style={{ color: c }}>{status}</span>
           </p>
         </div>
       </div>
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-xs uppercase tracking-wide font-medium" style={{ color: theme.textMuted }}>Confidence Score</span>
-          <span className="text-lg font-bold font-display" style={{ color: c }}>{confidence}%</span>
+          <span className="text-xs uppercase tracking-wide font-medium" style={{ color: theme.textMuted }}>
+            Threat Level: <span className="font-bold uppercase" style={{ color: c }}>{threatLevel}</span>
+          </span>
+          <span className="text-lg font-bold font-display" style={{ color: c }}>{pctStr}</span>
         </div>
         <div className="h-2 rounded-full overflow-hidden" style={{ background: `${c}15` }}>
-          <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${confidence}%` }}
+          <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${numericPercentage}%` }}
             transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
             style={{ background: `linear-gradient(90deg, ${c}60, ${c})`, boxShadow: `0 0 10px ${c}60` }} />
         </div>
@@ -114,10 +125,12 @@ const URLScanner = () => {
       const data = await scanUrl(url.trim()); setResult(data)
     } catch (err) {
       setError(err.message)
+      const isMalicious = url.includes('paypal')||url.includes('.ru')||url.includes('.tk')
       setResult({ result: {
-        prediction_label: url.includes('paypal')||url.includes('.ru')||url.includes('.tk') ? 'malicious' : 'safe',
-        confidence_score: 0.94,
-        threat_type: url.includes('paypal')||url.includes('.ru') ? 'phishing' : 'clean',
+        is_malicious: isMalicious,
+        threat_percentage: isMalicious ? '94.0%' : '15.0%',
+        threat_level: isMalicious ? 'high' : 'low',
+        status: isMalicious ? 'phishing' : 'clean',
         indicators: url.includes('paypal') ? ['suspicious_tld','brand_impersonation','login_form'] : [],
       }, source: 'demo' })
     } finally { setLoading(false) }

@@ -48,7 +48,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const message = error.response?.data?.detail || error.message || 'Request failed'
+    let message = error.response?.data?.detail || error.message || 'Request failed'
+    if (Array.isArray(message)) {
+      message = message.map(err => {
+        const fieldName = err.loc && err.loc.length > 1 ? err.loc[1] : '';
+        return fieldName ? `${fieldName}: ${err.msg}` : err.msg;
+      }).join(', ')
+    } else if (typeof message === 'object') {
+      message = JSON.stringify(message)
+    }
     return Promise.reject(new Error(message))
   }
 )
@@ -69,7 +77,7 @@ export const scanUrl = (url) =>
  * @returns {Promise<{result: {prediction_label, confidence_score, threat_type, indicators, summary}, source: string}>}
  */
 export const scanEmail = (text) =>
-  api.post('/scan/email', { text })
+  api.post('/scan/email', { email_content: text })
 
 // ─── Stats Endpoint ────────────────────────────────────────────────────────────
 
@@ -78,7 +86,7 @@ export const scanEmail = (text) =>
  * @returns {Promise<{total_scans, threats_detected, safe_requests, cache_hit_rate, scan_activity, threat_distribution}>}
  */
 export const getStats = () =>
-  api.get('/stats')
+  api.get('/stats/summary')
 
 // ─── History Endpoint ──────────────────────────────────────────────────────────
 
@@ -89,7 +97,7 @@ export const getStats = () =>
  * @returns {Promise<{records: Array, total: number}>}
  */
 export const getHistory = (limit = 50, offset = 0) =>
-  api.get('/history', { params: { limit, offset } })
+  api.get('/stats/history', { params: { limit, offset } })
 
 // ─── Cache Status Endpoint ─────────────────────────────────────────────────────
 
@@ -98,7 +106,7 @@ export const getHistory = (limit = 50, offset = 0) =>
  * @returns {Promise<{l1: {hits, misses, hit_rate}, l2: {hits, misses, hit_rate}, l3: {hits, misses, hit_rate}}>}
  */
 export const getCacheStatus = () =>
-  api.get('/cache/status')
+  api.get('/stats/cache/status')
 
 /**
  * Check backend health status
@@ -116,14 +124,14 @@ export default api
  * @returns {Promise<{access_token, token_type, user}>}
  */
 export const loginUser = (email, password) =>
-  api.post('/auth/login', { email, password })
+  api.post('/auth/login', { username_or_email: email, password })
 
 /**
  * Register a new user
  * @returns {Promise<{message, user}>}
  */
-export const registerUser = (name, email, password) =>
-  api.post('/auth/register', { name, email, password })
+export const registerUser = (username, email, password) =>
+  api.post('/auth/register', { username, email, password })
 
 /**
  * Get current logged-in user info (optional, if your backend supports it)
@@ -141,7 +149,7 @@ export const getMe = () =>
 export const scanFile = (file) => {
   const formData = new FormData()
   formData.append('file', file)
-  return api.post('/scan/file', formData, {
+  return api.post('/scan/app', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
@@ -152,4 +160,4 @@ export const scanFile = (file) => {
  * @returns {Promise<{found, safe, app_name, category, developer, rating, installs}>}
  */
 export const searchApp = (appName) =>
-  api.get('/apps/search', { params: { q: appName } })
+  api.post('/scan/app-name', { app_name: appName })

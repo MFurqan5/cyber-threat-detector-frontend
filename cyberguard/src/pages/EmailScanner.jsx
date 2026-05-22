@@ -44,8 +44,10 @@ const EmailScanner = () => {
   }
 
   const r = result?.result || result
-  const isMalicious = r && (r.prediction_label === 'malicious')
+  const isMalicious = r && (r.prediction_label === 'malicious' || r.is_malicious === true)
+  const label = r ? (r.prediction_label || (isMalicious ? 'malicious' : 'safe')) : ''
   const c = !r ? theme.accent : isMalicious ? theme.danger : theme.safe
+  const rawConfidence = r ? (r.confidence_score !== undefined ? r.confidence_score : r.confidence) : 0
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
@@ -161,7 +163,7 @@ const EmailScanner = () => {
                     : <Shield size={24} style={{ color: c }} />}
                 </div>
                 <div>
-                  <p className="text-lg font-bold font-display uppercase" style={{ color: c }}>{r.prediction_label}</p>
+                  <p className="text-lg font-bold font-display uppercase" style={{ color: c }}>{label}</p>
                   <p className="text-xs" style={{ color: theme.textMuted }}>Threat: <span className="font-semibold" style={{ color: c }}>{r.threat_type}</span></p>
                 </div>
               </div>
@@ -169,7 +171,7 @@ const EmailScanner = () => {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: theme.textMuted }}>Confidence Metrics</p>
                 <div className="space-y-3">
-                  <ConfidenceBar score={r.confidence_score} label="Classification Confidence" color={c} />
+                  <ConfidenceBar score={rawConfidence} label="Classification Confidence" color={c} />
                   <ConfidenceBar score={0.89} label="Model Certainty" color={theme.accent} />
                   <ConfidenceBar score={0.76} label="Pattern Match" color={theme.warning} />
                 </div>
