@@ -8,7 +8,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from backend.routes import scan, stats
+from backend.routes import scan, stats, auth
 from backend.db import db
 from backend.cache import cache_manager
 
@@ -83,9 +83,23 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         }
     )
 
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    import traceback
+    tb = traceback.format_exc()
+    logger.error(f"DEBUG EXCEPTION HANDLER: {tb}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": str(exc),
+            "traceback": tb
+        }
+    )
+
 # Include routers
 app.include_router(scan.router)
 app.include_router(stats.router)
+app.include_router(auth.router)
 
 # Root endpoint
 @app.get("/")
