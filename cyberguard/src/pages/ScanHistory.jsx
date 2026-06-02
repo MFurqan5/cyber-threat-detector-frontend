@@ -8,6 +8,7 @@ import {
 import { getHistory } from '../services/api'
 import { GlassCard, StatusPill } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 
 // ─── PDF Export — light theme style ──────────────────────────────────────────
 const exportToPDF = async (rows) => {
@@ -241,6 +242,7 @@ const TypeIcon = ({ type, theme }) => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const ScanHistory = () => {
   const { theme } = useTheme()
+  const { user } = useAuth()
   const [records, setRecords]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -255,15 +257,27 @@ const ScanHistory = () => {
   const load = async () => {
     setLoading(true)
     try {
-      const data = await getHistory(100, 0)
-      setRecords((data.records || data).map(r => ({ ...r, _date: new Date(r.timestamp) })))
+      const data = await getHistory(100, 0, user?.id)
+      const rawRecords = data.records || data.scans || (Array.isArray(data) ? data : [])
+      const mappedRecords = rawRecords.map(r => ({
+        id: r.id,
+        timestamp: r.timestamp || '',
+        _date: r.timestamp ? new Date(r.timestamp) : new Date(),
+        input_type: r.type || r.input_type || 'url',
+        status: r.prediction || r.status || 'safe',
+        threat_type: r.threat_type || 'clean',
+        confidence_score: r.confidence !== undefined ? r.confidence : (r.confidence_score !== undefined ? r.confidence_score : 0),
+        input_value: r.input || r.input_value || '',
+      }))
+      setRecords(mappedRecords)
+      setError(null)
     } catch (err) {
       setError(err.message)
       setRecords(generateFallback())
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [user])
 
   const filtered = useMemo(() => {
     return records

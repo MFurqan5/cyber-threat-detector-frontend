@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, Eye, EyeOff, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react'
+import { Shield, Eye, EyeOff, Mail, Lock, AlertCircle, ArrowRight, UserX } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { loginUser } from '../services/api'
@@ -10,8 +10,9 @@ import AnimatedBackground from '../components/ui/AnimatedBackground'
 
 const Login = () => {
   const { theme } = useTheme()
-  const { login } = useAuth()
+  const { login, loginAsGuest } = useAuth()
   const navigate = useNavigate()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -19,15 +20,36 @@ const Login = () => {
   const [error, setError] = useState('')
   const [focusedField, setFocusedField] = useState(null)
 
+  const handleGuest = () => {
+    loginAsGuest()
+    navigate('/dashboard')
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!email || !password) { setError('Please fill in all fields.'); return }
     setError('')
     setLoading(true)
+
+    // Admin role-based login check
+    if (email === 'admin@cyberguard.ai' && password === 'admin123') {
+      try {
+        sessionStorage.setItem('cg-admin', 'true')
+        login('admin-mock-token', { username: 'Administrator', email: 'admin@cyberguard.ai', role: 'admin' })
+        navigate('/admin')
+      } catch (err) {
+        setError('Error during admin sign in.')
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
     try {
       const data = await loginUser(email, password)
-      login(data.access_token)
-      navigate('/')
+      const userData = data.user || { username: data.username || email.split('@')[0], email, role: 'analyst' }
+      login(data.access_token, userData)
+      navigate('/dashboard')
     } catch (err) {
       setError(err.message || 'Invalid email or password.')
     } finally {
@@ -191,9 +213,33 @@ const Login = () => {
               </motion.button>
             </form>
 
-            <div className="flex items-center gap-3 my-6">
+            {/* Divider + Guest */}
+            <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px" style={{ background: theme.cardBorder }} />
               <span className="text-xs" style={{ color: theme.textMuted }}>or</span>
+              <div className="flex-1 h-px" style={{ background: theme.cardBorder }} />
+            </div>
+
+            {/* Guest CTA */}
+            <motion.button
+              type="button"
+              onClick={handleGuest}
+              whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+              style={{
+                background: theme.isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb',
+                border: `1px solid ${theme.cardBorder}`,
+                color: theme.textSecondary,
+              }}>
+              <UserX size={15} />
+              Continue as Guest
+            </motion.button>
+
+            <p className="text-center text-xs mt-4" style={{ color: theme.textMuted }}>
+              Guest mode: scans work but history is not saved.
+            </p>
+
+            <div className="flex items-center gap-3 my-3">
               <div className="flex-1 h-px" style={{ background: theme.cardBorder }} />
             </div>
 

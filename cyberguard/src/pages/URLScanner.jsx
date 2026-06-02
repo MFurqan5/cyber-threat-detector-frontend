@@ -161,15 +161,7 @@ const URLScanner = () => {
     try {
       const data = await scanUrl(url.trim()); setResult(data)
     } catch (err) {
-      setError(err.message)
-      const isMalicious = url.includes('paypal')||url.includes('.ru')||url.includes('.tk')
-      setResult({ result: {
-        is_malicious: isMalicious,
-        threat_percentage: isMalicious ? '94.0%' : '15.0%',
-        threat_level: isMalicious ? 'high' : 'low',
-        status: isMalicious ? 'phishing' : 'clean',
-        indicators: url.includes('paypal') ? ['suspicious_tld','brand_impersonation','login_form'] : [],
-      }, source: 'demo' })
+      setError(err.message || 'Failed to scan URL. Please ensure the backend is running.')
     } finally { setLoading(false) }
   }
 

@@ -4,7 +4,7 @@ import {
   BarChart2, Shield, AlertTriangle, Zap, Database,
   Users, FileText, Server, RefreshCw, Download,
   CheckCircle, XCircle, AlertCircle, Activity,
-  Clock, Globe, Mail, LogOut, Lock,
+  Clock, Globe, Mail, LogOut, Lock, Cpu,
 } from 'lucide-react'
 import {
   AreaChart, Area, PieChart, Pie, Cell,
@@ -12,10 +12,10 @@ import {
   Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 import ThemeToggle from '../components/ui/ThemeSwitcher'
 import AnimatedBackground from '../components/ui/AnimatedBackground'
 
-// ─── Admin credentials (hardcoded) ────────────────────────────────────────────
 const ADMIN_EMAIL    = 'admin@cyberguard.ai'
 const ADMIN_PASSWORD = 'admin123'
 
@@ -625,10 +625,15 @@ const AdminDashboardContent = ({ onLogout }) => {
 
 // ─── Root export ───────────────────────────────────────────────────────────────
 const AdminDashboard = () => {
+  const { logout } = useAuth()
   const [loggedIn, setLoggedIn] = useState(() => sessionStorage.getItem('cg-admin') === 'true')
 
   const handleLogin  = () => { sessionStorage.setItem('cg-admin', 'true');  setLoggedIn(true)  }
-  const handleLogout = () => { sessionStorage.removeItem('cg-admin');        setLoggedIn(false) }
+  const handleLogout = () => {
+    sessionStorage.removeItem('cg-admin')
+    logout()
+    setLoggedIn(false)
+  }
 
   return loggedIn
     ? <AdminDashboardContent onLogout={handleLogout} />

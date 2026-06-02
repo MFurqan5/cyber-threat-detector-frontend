@@ -5,12 +5,14 @@ import {
   AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { getStats } from '../services/api'
+import { getStats, getDashboardStats } from '../services/api'
 import { StatCard, GlassCard, SectionHeader, StatusPill } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 
 const Dashboard = () => {
   const { theme } = useTheme()
+  const { user } = useAuth()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -84,8 +86,9 @@ const Dashboard = () => {
   }
 
   useEffect(() => {
-    getStats().then(setStats).catch((err) => { setError(err.message); setStats(fallback) }).finally(() => setLoading(false))
-  }, [])
+    const fetchStats = user ? getDashboardStats : getStats
+    fetchStats().then(setStats).catch((err) => { setError(err.message); setStats(fallback) }).finally(() => setLoading(false))
+  }, [user])
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null
