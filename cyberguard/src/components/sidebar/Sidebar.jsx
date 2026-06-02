@@ -8,13 +8,13 @@ import {
 import { useTheme } from '../../context/ThemeContext'
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { to: '/url-scanner', icon: Globe, label: 'URL Scanner' },
-  { to: '/email-scanner', icon: Mail, label: 'Email Scanner' },
-  { to: '/malware-scanner', icon: ShieldAlert, label: 'Malware Scanner' },
-  { to: '/cache', icon: Database, label: 'Cache Analytics' },
-  { to: '/history', icon: History, label: 'Scan History' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { to: '/dashboard/url-scanner', icon: Globe, label: 'URL Scanner' },
+  { to: '/dashboard/email-scanner', icon: Mail, label: 'Email Scanner' },
+  { to: '/dashboard/malware-scanner', icon: ShieldAlert, label: 'Malware Scanner' },
+  { to: '/dashboard/cache', icon: Database, label: 'Cache Analytics' },
+  { to: '/dashboard/history', icon: History, label: 'Scan History' },
+  { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ]
 
 const Sidebar = ({ collapsed, setCollapsed }) => {

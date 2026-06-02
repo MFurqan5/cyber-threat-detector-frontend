@@ -78,7 +78,7 @@ const Signup = () => {
     try {
       const data = await registerUser(form.username, form.email, form.password)
       login(data.access_token)
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.')
     } finally {

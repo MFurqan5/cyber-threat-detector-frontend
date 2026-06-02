@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, Eye, EyeOff, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react'
@@ -10,8 +10,14 @@ import AnimatedBackground from '../components/ui/AnimatedBackground'
 
 const Login = () => {
   const { theme } = useTheme()
-  const { login } = useAuth()
+  const { login, isLoggedIn } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isLoggedIn, navigate])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -27,7 +33,7 @@ const Login = () => {
     try {
       const data = await loginUser(email, password)
       login(data.access_token)
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       setError(err.message || 'Invalid email or password.')
     } finally {

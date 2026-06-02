@@ -256,7 +256,19 @@ const ScanHistory = () => {
     setLoading(true)
     try {
       const data = await getHistory(100, 0)
-      setRecords((data.records || data).map(r => ({ ...r, _date: new Date(r.timestamp) })))
+      const rawRecords = data.scans || (Array.isArray(data) ? data : [])
+      const mappedRecords = rawRecords.map(r => ({
+        id: r.id,
+        timestamp: r.timestamp || '',
+        _date: r.timestamp ? new Date(r.timestamp) : new Date(),
+        input_type: r.type || r.input_type || 'url',
+        status: r.prediction || r.status || 'safe',
+        threat_type: r.threat_type || 'clean',
+        confidence_score: r.confidence !== undefined ? r.confidence : (r.confidence_score !== undefined ? r.confidence_score : 0),
+        input_value: r.input || r.input_value || '',
+      }))
+      setRecords(mappedRecords)
+      setError(null)
     } catch (err) {
       setError(err.message)
       setRecords(generateFallback())

@@ -15,7 +15,6 @@ import { useTheme } from '../context/ThemeContext'
 import ThemeToggle from '../components/ui/ThemeSwitcher'
 import AnimatedBackground from '../components/ui/AnimatedBackground'
 
-// ─── Admin credentials (hardcoded) ────────────────────────────────────────────
 const ADMIN_EMAIL    = 'admin@cyberguard.ai'
 const ADMIN_PASSWORD = 'admin123'
 

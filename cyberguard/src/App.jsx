@@ -36,8 +36,7 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
 
             {/* Main app */}
-            {/* <Route path="/" element={<AppLayout />}> */}
-            <Route path="/" element={
+            <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <AppLayout />
                 </ProtectedRoute>
@@ -51,6 +50,7 @@ const App = () => (
               <Route path="settings"        element={<Settings />}       />
             </Route>
 
+            <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>
