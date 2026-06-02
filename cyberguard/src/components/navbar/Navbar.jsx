@@ -3,8 +3,10 @@ import { motion } from 'framer-motion'
 import { Activity, Wifi, WifiOff } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useNotifications } from '../../context/NotificationContext'
+import { useAuth } from '../../context/AuthContext'
 import ThemeToggle from '../ui/ThemeSwitcher'
 import NotificationDropdown from '../ui/NotificationDropdown'
+import ProfilePanel from './ProfilePanel'
 
 const liveActivities = [
   'Scanning URL: suspicious-login.ru',
@@ -23,8 +25,18 @@ const useConnectionStatus = () => {
     const check = async () => {
       if (!navigator.onLine) { setStatus({ online: false, latency: null }); return }
       const start = Date.now()
+
+      let backendUrl = 'http://127.0.0.1:8000'
+      const cookieMatch = document.cookie.match(/(?:^|; )cg-backend-url=([^;]*)/)
+      if (cookieMatch) {
+        backendUrl = decodeURIComponent(cookieMatch[1])
+      }
+      if (backendUrl === 'http://localhost:8000') {
+        backendUrl = 'http://127.0.0.1:8000'
+      }
+
       try {
-        await fetch('http://localhost:8000/docs', { method: 'HEAD', signal: AbortSignal.timeout(2000) })
+        await fetch(`${backendUrl}/docs`, { method: 'HEAD', signal: AbortSignal.timeout(2000) })
         setStatus({ online: true, latency: Date.now() - start })
       } catch {
         setStatus({ online: navigator.onLine, latency: null })
@@ -44,10 +56,20 @@ const useConnectionStatus = () => {
 const Navbar = () => {
   const { theme } = useTheme()
   const { unreadCount } = useNotifications()
+  const { user, guest } = useAuth()
   const [currentActivity, setCurrentActivity] = useState(0)
   const [time, setTime] = useState(new Date())
-  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifOpen, setNotifOpen]   = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const notifRef = useRef()
+
+  const displayName  = guest ? 'Guest'            : (user?.username || user?.email || 'User')
+  const displayRole  = guest ? 'Guest Session'    : (user?.role || 'analyst')
+  const avatarLetter = guest ? 'G'                : displayName.charAt(0).toUpperCase()
+  const avatarBg     = guest
+    ? (theme.isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb')
+    : `linear-gradient(135deg, ${theme.accent}cc, ${theme.accent}88)`
+  const avatarColor  = guest ? theme.textMuted : '#fff'
   const { online, latency } = useConnectionStatus()
 
   useEffect(() => {
@@ -151,15 +173,27 @@ const Navbar = () => {
           <NotificationDropdown open={notifOpen} onClose={() => setNotifOpen(false)} />
         </div>
 
-        {/* User */}
-        <div className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-          style={{ border: `1px solid ${theme.cardBorder}` }}>
-          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold"
-            style={{ background: `${theme.accent}18`, border: `1px solid ${theme.accent}40`, color: theme.accent }}>
-            U
+        {/* User badge — click to open profile panel */}
+        <div
+          onClick={() => setProfileOpen(p => !p)}
+          className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:opacity-80 transition-opacity select-none"
+          style={{
+            border: `1px solid ${profileOpen ? theme.accent : guest ? theme.cardBorder : theme.cardBorder}`,
+            borderStyle: guest ? 'dashed' : 'solid',
+            transition: 'border-color 0.2s'
+          }}>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+            style={{ background: avatarBg, color: avatarColor, boxShadow: guest ? 'none' : `0 0 0 2px ${theme.accent}30` }}>
+            {avatarLetter}
           </div>
-          <span className="text-xs hidden sm:block" style={{ color: theme.textSecondary }}>Analyst</span>
+          <div className="hidden sm:flex flex-col leading-none">
+            <span className="text-xs font-semibold" style={{ color: theme.textPrimary }}>{displayName}</span>
+            <span className="text-xs capitalize" style={{ color: guest ? theme.warning : theme.textMuted }}>{displayRole}</span>
+          </div>
         </div>
+
+        {/* Profile panel */}
+        <ProfilePanel open={profileOpen} onClose={() => setProfileOpen(false)} />
       </div>
     </header>
   )

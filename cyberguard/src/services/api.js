@@ -93,16 +93,27 @@ export const scanEmail = (text) =>
 export const getStats = () =>
   api.get('/stats/summary')
 
+/**
+ * Get user-scoped dashboard statistics
+ * @returns {Promise<{total_scans, threats_detected, safe_requests, cache_hit_rate, scan_activity, threat_distribution, cache, recent_scans}>}
+ */
+export const getDashboardStats = () =>
+  api.get('/stats/summary/me')
+
 // ─── History Endpoint ──────────────────────────────────────────────────────────
 
 /**
  * Get scan history
  * @param {number} limit - Number of records to fetch
  * @param {number} offset - Pagination offset
+ * @param {string} userId - Optional user ID to filter by
  * @returns {Promise<{records: Array, total: number}>}
  */
-export const getHistory = (limit = 50, offset = 0) =>
-  api.get('/stats/history', { params: { limit, offset } })
+export const getHistory = (limit = 50, offset = 0, userId = null) => {
+  const params = { limit, offset }
+  if (userId) params.user_id = userId
+  return api.get('/stats/history', { params })
+}
 
 // ─── Cache Status Endpoint ─────────────────────────────────────────────────────
 
@@ -139,10 +150,17 @@ export const registerUser = (username, email, password) =>
   api.post('/auth/register', { username, email, password })
 
 /**
- * Get current logged-in user info (optional, if your backend supports it)
+ * Get current logged-in user info
  */
 export const getMe = () =>
   api.get('/auth/me')
+
+/**
+ * Update current user's profile (username, email, password)
+ */
+export const updateMe = (data) =>
+  api.put('/auth/me', data)
+
 
 // ─── Malware Scanner Endpoints ─────────────────────────────────────────────────
 

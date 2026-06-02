@@ -8,6 +8,7 @@ import {
 import { getHistory } from '../services/api'
 import { GlassCard, StatusPill } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 
 // ─── PDF Export — light theme style ──────────────────────────────────────────
 const exportToPDF = async (rows) => {
@@ -241,6 +242,7 @@ const TypeIcon = ({ type, theme }) => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const ScanHistory = () => {
   const { theme } = useTheme()
+  const { user } = useAuth()
   const [records, setRecords]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -255,7 +257,7 @@ const ScanHistory = () => {
   const load = async () => {
     setLoading(true)
     try {
-      const data = await getHistory(100, 0)
+      const data = await getHistory(100, 0, user?.id)
       const rawRecords = data.scans || (Array.isArray(data) ? data : [])
       const mappedRecords = rawRecords.map(r => ({
         id: r.id,
@@ -275,7 +277,7 @@ const ScanHistory = () => {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [user])
 
   const filtered = useMemo(() => {
     return records

@@ -16,8 +16,16 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ToastContainer from './components/ui/ToastContainer'
 
+/** Allow through if authenticated OR in guest mode */
 const ProtectedRoute = ({ children }) => {
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, guest } = useAuth()
+  return (isLoggedIn || guest) ? children : <Navigate to="/login" replace />
+}
+
+/** Block guests from scan history */
+const AuthOnlyRoute = ({ children }) => {
+  const { isLoggedIn, guest } = useAuth()
+  if (guest) return <Navigate to="/dashboard" replace />
   return isLoggedIn ? children : <Navigate to="/login" replace />
 }
 
@@ -46,8 +54,11 @@ const App = () => (
               <Route path="email-scanner"   element={<EmailScanner />}   />
               <Route path="malware-scanner" element={<MalwareScanner />} />
               <Route path="cache"           element={<CacheAnalytics />} />
-              <Route path="history"         element={<ScanHistory />}    />
               <Route path="settings"        element={<Settings />}       />
+              {/* Scan History: authenticated users only, guests are redirected */}
+              <Route path="history"         element={
+                <AuthOnlyRoute><ScanHistory /></AuthOnlyRoute>
+              } />
             </Route>
 
             <Route path="/" element={<Navigate to="/login" replace />} />
