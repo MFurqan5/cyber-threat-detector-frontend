@@ -87,13 +87,17 @@ const SettingsPage = () => {
     const saved = getCookie('cg-settings')
     if (saved) {
       try {
-        return JSON.parse(decodeURIComponent(saved))
+        const parsed = JSON.parse(decodeURIComponent(saved))
+        if (parsed.backendUrl === 'http://localhost:8000') {
+          parsed.backendUrl = 'http://127.0.0.1:8000'
+        }
+        return parsed
       } catch (e) {
         console.error('Error parsing settings cookie:', e)
       }
     }
     return {
-      backendUrl: getCookie('cg-backend-url') || 'http://localhost:8000',
+      backendUrl: getCookie('cg-backend-url') || 'http://127.0.0.1:8000',
       l1Enabled: true, l2Enabled: true, l3Enabled: true,
       l1MaxSize: '500', l2TTL: '3600', l3TTL: '86400',
       urlModelEnabled: true, emailModelEnabled: true,
@@ -120,7 +124,7 @@ const SettingsPage = () => {
 
       <SectionCard icon={Server} iconColor={theme.accent} title="API Configuration" subtitle="FastAPI backend connection settings">
         <TextSetting label="Backend URL" value={s.backendUrl} onChange={set('backendUrl')}
-          placeholder="http://localhost:8000" hint="Base URL of your FastAPI backend." />
+          placeholder="http://127.0.0.1:8000" hint="Base URL of your FastAPI backend." />
         <Divider />
         <TextSetting label="Confidence Threshold" value={s.confidenceThreshold} onChange={set('confidenceThreshold')}
           placeholder="0.7" hint="Minimum confidence to classify a scan as malicious (0.0–1.0)" />

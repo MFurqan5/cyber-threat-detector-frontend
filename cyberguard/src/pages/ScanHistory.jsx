@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   History, Globe, Mail, Search, RefreshCw,
   ChevronDown, Filter, Download, FileText,
-  FileSpreadsheet, Calendar, X,
+  FileSpreadsheet, Calendar, X, File, Smartphone,
 } from 'lucide-react'
 import { getHistory, healthCheck } from '../services/api'
 import { GlassCard, StatusPill, SecondaryButton } from '../components/ui/UIComponents'
@@ -114,32 +114,40 @@ const DateRangePicker = ({ startDate, endDate, onStartChange, onEndChange, onCle
 
 // ─── Generate fallback data ───────────────────────────────────────────────────
 const generateFallback = () => {
-  const types = ['url', 'email']
+  const types = ['url', 'email', 'file', 'app']
   const statuses = ['safe', 'malicious', 'malicious', 'safe', 'safe']
-  const threatByStatus = { safe: 'clean', malicious: 'phishing' }
-  const emailThreats = ['spam', 'phishing', 'clean', 'clean', 'spam']
   const now = new Date()
 
   return Array.from({ length: 40 }, (_, i) => {
-    const type = types[i % 2]
+    const type = types[i % 4]
     const status = statuses[i % 5]
     const d = new Date(now - i * 9 * 60000)
+    let threat_type = 'clean'
+    if (status === 'malicious') {
+      if (type === 'url') threat_type = 'phishing'
+      else if (type === 'email') threat_type = 'spam'
+      else threat_type = 'malware'
+    }
     return {
       id: i + 1,
       timestamp: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       _date: d,
       input_type: type,
       status,
-      threat_type: type === 'url' ? threatByStatus[status] : emailThreats[i % 5],
+      threat_type,
       confidence_score: 0.72 + Math.random() * 0.27,
       input_value: type === 'url'
         ? (status === 'malicious' ? `https://suspicious-${['login','verify','secure'][i % 3]}-${i}.${['ru','tk','xyz'][i % 3]}/` : `https://legitimate-site-${i}.com/`)
-        : `Email body sample #${i + 1}`,
+        : type === 'email'
+        ? `Email body sample #${i + 1}`
+        : type === 'file'
+        ? `suspicious-file-${i}.exe`
+        : `app-package-name-${i}`,
     }
   })
 }
 
-const FILTERS = ['All', 'URL', 'Email', 'Safe', 'Malicious']
+const FILTERS = ['All', 'URL', 'Email', 'File', 'App', 'Safe', 'Malicious']
 const PER_PAGE = 15
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -186,6 +194,8 @@ const ScanHistory = () => {
       .filter(r => {
         if (activeFilter === 'URL') return r.input_type === 'url'
         if (activeFilter === 'Email') return r.input_type === 'email'
+        if (activeFilter === 'File') return r.input_type === 'file'
+        if (activeFilter === 'App') return r.input_type === 'app'
         if (activeFilter === 'Safe') return r.status === 'safe'
         if (activeFilter === 'Malicious') return r.status === 'malicious'
         return true
@@ -221,6 +231,8 @@ const ScanHistory = () => {
     malicious: records.filter(r => r.status === 'malicious').length,
     urls: records.filter(r => r.input_type === 'url').length,
     emails: records.filter(r => r.input_type === 'email').length,
+    files: records.filter(r => r.input_type === 'file').length,
+    apps: records.filter(r => r.input_type === 'app').length,
   }), [records])
 
   const handleExportPDF = async () => {
@@ -259,13 +271,15 @@ const ScanHistory = () => {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
           { label: 'Total Scans', value: stats.total, color: theme.accent },
           { label: 'Safe', value: stats.safe, color: theme.safe },
           { label: 'Malicious', value: stats.malicious, color: theme.danger },
           { label: 'URL Scans', value: stats.urls, color: theme.accent },
           { label: 'Email Scans', value: stats.emails, color: theme.warning },
+          { label: 'File Scans', value: stats.files, color: theme.accent },
+          { label: 'App Scans', value: stats.apps, color: theme.warning },
         ].map(({ label, value, color }, i) => (
           <motion.div key={label}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -446,9 +460,10 @@ const ScanHistory = () => {
                   <span className="text-xs font-mono" style={{ color: theme.textMuted }}>{record.timestamp}</span>
 
                   <div className="flex items-center gap-1.5">
-                    {record.input_type === 'url'
-                      ? <Globe size={12} style={{ color: theme.accent }} />
-                      : <Mail size={12} style={{ color: theme.warning }} />}
+                    {record.input_type === 'url' && <Globe size={12} style={{ color: theme.accent }} />}
+                    {record.input_type === 'email' && <Mail size={12} style={{ color: theme.warning }} />}
+                    {record.input_type === 'file' && <File size={12} style={{ color: theme.accent }} />}
+                    {record.input_type === 'app' && <Smartphone size={12} style={{ color: theme.warning }} />}
                     <span className="text-xs uppercase" style={{ color: theme.textSecondary }}>{record.input_type}</span>
                   </div>
 

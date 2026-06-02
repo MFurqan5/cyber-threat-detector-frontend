@@ -60,6 +60,40 @@ const ResultCard = ({ result }) => {
   const status = result.status || result.threat_type || 'unknown'
   const label = result.prediction_label || (isMalicious ? 'malicious' : 'safe')
   
+  const renderCacheBadge = () => {
+    const from = result.from_cache || 'none'
+    const timeMs = result.prediction_time_ms !== undefined ? result.prediction_time_ms : 0
+    let badgeText = `Served from AI Model (took ${timeMs}ms)`
+    let badgeColor = theme.textMuted
+    let badgeBg = theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'
+    let badgeBorder = theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+
+    if (from === 'L1') {
+      badgeText = `Served from L1 Memory (took ${timeMs}ms)`
+      badgeColor = theme.accent
+      badgeBg = `${theme.accent}12`
+      badgeBorder = `${theme.accent}25`
+    } else if (from === 'L2') {
+      badgeText = `Served from L2 Redis (took ${timeMs}ms)`
+      badgeColor = theme.safe
+      badgeBg = `${theme.safe}12`
+      badgeBorder = `${theme.safe}25`
+    } else if (from === 'L3') {
+      badgeText = `Served from L3 MongoDB (took ${timeMs}ms)`
+      badgeColor = theme.warning
+      badgeBg = `${theme.warning}12`
+      badgeBorder = `${theme.warning}25`
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+        style={{ color: badgeColor, background: badgeBg, border: `1px solid ${badgeBorder}` }}>
+        <Zap size={11} className="shrink-0 animate-pulse" />
+        {badgeText}
+      </span>
+    )
+  }
+
   return (
     <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.5 }} className="rounded-2xl p-6"
@@ -72,12 +106,15 @@ const ResultCard = ({ result }) => {
             : <Shield size={28} style={{ color: c, filter: `drop-shadow(0 0 8px ${c})` }} />}
         </div>
         <div className="flex-1">
-          <h3 className="text-xl font-bold font-display uppercase tracking-wider" style={{ color: c }}>
+          <h3 className="text-xl font-bold font-display uppercase tracking-wider leading-tight" style={{ color: c }}>
             {label}
           </h3>
-          <p className="text-sm" style={{ color: theme.textMuted }}>
-            Status: <span className="font-semibold uppercase" style={{ color: c }}>{status}</span>
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <p className="text-sm" style={{ color: theme.textMuted }}>
+              Status: <span className="font-semibold uppercase" style={{ color: c }}>{status}</span>
+            </p>
+            {renderCacheBadge()}
+          </div>
         </div>
       </div>
       <div className="mb-4">

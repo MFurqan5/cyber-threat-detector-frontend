@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { BarChart2, ShieldCheck, AlertTriangle, Zap, Globe, Mail } from 'lucide-react'
+import { BarChart2, ShieldCheck, AlertTriangle, Zap, Globe, Mail, File, Smartphone } from 'lucide-react'
 import {
   AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -14,6 +14,46 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const getThreatColor = (name) => {
+    switch (name?.toLowerCase()) {
+      case 'malware':
+        return theme.danger
+      case 'phishing':
+        return theme.warning
+      case 'spam':
+        return theme.accent
+      case 'clean':
+        return theme.safe
+      default:
+        return theme.textMuted || '#888888'
+    }
+  }
+
+  const getScanIcon = (type) => {
+    const iconSize = 13
+    switch (type?.toLowerCase()) {
+      case 'url':
+        return <Globe size={iconSize} style={{ color: theme.accent }} />
+      case 'email':
+        return <Mail size={iconSize} style={{ color: theme.warning }} />
+      case 'file':
+        return <File size={iconSize} style={{ color: theme.accent }} />
+      case 'app':
+        return <Smartphone size={iconSize} style={{ color: theme.warning }} />
+      default:
+        return <Globe size={iconSize} style={{ color: theme.accent }} />
+    }
+  }
+
+  const getScanIconStyles = (type) => {
+    const isAccent = type === 'url' || type === 'file'
+    const color = isAccent ? theme.accent : theme.warning
+    return {
+      background: `${color}10`,
+      border: `1px solid ${color}25`,
+    }
+  }
 
   const fallback = {
     total_scans: 14820, threats_detected: 2341, safe_requests: 12479, cache_hit_rate: 0.78,
@@ -144,23 +184,26 @@ const Dashboard = () => {
                       const y = cy + r * Math.sin(-midAngle * Math.PI / 180)
                       return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>{`${(percent * 100).toFixed(0)}%`}</text>
                     }}>
-                    {(stats?.threat_distribution || []).map((_, i) => (
-                      <Cell key={i} fill={pieColors[i % pieColors.length]} stroke="rgba(0,0,0,0.2)" strokeWidth={1} />
+                    {(stats?.threat_distribution || []).map((item) => (
+                      <Cell key={item.name} fill={getThreatColor(item.name)} stroke="rgba(0,0,0,0.2)" strokeWidth={1} />
                     ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="space-y-2 mt-2">
-              {(stats?.threat_distribution || []).map((item, i) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ background: pieColors[i % pieColors.length] }} />
-                    <span className="text-xs" style={{ color: theme.textMuted }}>{item.name}</span>
+              {(stats?.threat_distribution || []).map((item) => {
+                const color = getThreatColor(item.name)
+                return (
+                  <div key={item.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                      <span className="text-xs" style={{ color: theme.textMuted }}>{item.name}</span>
+                    </div>
+                    <span className="text-xs font-semibold" style={{ color }}>{item.value}%</span>
                   </div>
-                  <span className="text-xs font-semibold" style={{ color: pieColors[i % pieColors.length] }}>{item.value}%</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </GlassCard>
         </motion.div>
@@ -215,13 +258,8 @@ const Dashboard = () => {
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                      style={{
-                        background: `${scan.type === 'url' ? theme.accent : theme.warning}10`,
-                        border: `1px solid ${scan.type === 'url' ? theme.accent : theme.warning}25`,
-                      }}>
-                      {scan.type === 'url'
-                        ? <Globe size={13} style={{ color: theme.accent }} />
-                        : <Mail size={13} style={{ color: theme.warning }} />}
+                      style={getScanIconStyles(scan.type)}>
+                      {getScanIcon(scan.type)}
                     </div>
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.textPrimary }}>{scan.type}</p>

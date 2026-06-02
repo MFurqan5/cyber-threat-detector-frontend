@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Shield, AlertTriangle, Cpu, CheckCircle, X, AlertCircle } from 'lucide-react'
+import { Mail, Shield, AlertTriangle, Cpu, CheckCircle, X, AlertCircle, Zap } from 'lucide-react'
 import { scanEmail } from '../services/api'
 import { GlassCard, GlowButton, GlowInput, ConfidenceBar } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
@@ -162,9 +162,44 @@ const EmailScanner = () => {
                     ? <AlertTriangle size={24} style={{ color: c }} />
                     : <Shield size={24} style={{ color: c }} />}
                 </div>
-                <div>
-                  <p className="text-lg font-bold font-display uppercase" style={{ color: c }}>{label}</p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Threat: <span className="font-semibold" style={{ color: c }}>{r.threat_type}</span></p>
+                <div className="flex-grow">
+                  <p className="text-lg font-bold font-display uppercase leading-tight" style={{ color: c }}>{label}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <p className="text-xs" style={{ color: theme.textMuted }}>Threat: <span className="font-semibold uppercase" style={{ color: c }}>{r.threat_type}</span></p>
+                    {(() => {
+                      const from = result?.from_cache || r?.from_cache || 'none'
+                      const timeMs = r?.prediction_time_ms !== undefined ? r.prediction_time_ms : (result?.prediction_time_ms !== undefined ? result.prediction_time_ms : 0)
+                      let badgeText = `Served from AI Model (took ${timeMs}ms)`
+                      let badgeColor = theme.textMuted
+                      let badgeBg = theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'
+                      let badgeBorder = theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+
+                      if (from === 'L1') {
+                        badgeText = `Served from L1 Memory (took ${timeMs}ms)`
+                        badgeColor = theme.accent
+                        badgeBg = `${theme.accent}12`
+                        badgeBorder = `${theme.accent}25`
+                      } else if (from === 'L2') {
+                        badgeText = `Served from L2 Redis (took ${timeMs}ms)`
+                        badgeColor = theme.safe
+                        badgeBg = `${theme.safe}12`
+                        badgeBorder = `${theme.safe}25`
+                      } else if (from === 'L3') {
+                        badgeText = `Served from L3 MongoDB (took ${timeMs}ms)`
+                        badgeColor = theme.warning
+                        badgeBg = `${theme.warning}12`
+                        badgeBorder = `${theme.warning}25`
+                      }
+
+                      return (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                          style={{ color: badgeColor, background: badgeBg, border: `1px solid ${badgeBorder}` }}>
+                          <Zap size={11} className="shrink-0 animate-pulse" />
+                          {badgeText}
+                        </span>
+                      )
+                    })()}
+                  </div>
                 </div>
               </div>
 

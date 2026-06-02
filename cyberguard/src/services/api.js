@@ -22,7 +22,12 @@ export const eraseCookie = (name) => {
   document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax`
 }
 
-const BASE_URL = getCookie('cg-backend-url') || 'http://localhost:8000'
+let cookieUrl = getCookie('cg-backend-url')
+if (cookieUrl === 'http://localhost:8000') {
+  cookieUrl = 'http://127.0.0.1:8000'
+  setCookie('cg-backend-url', 'http://127.0.0.1:8000', 30)
+}
+const BASE_URL = cookieUrl || 'http://127.0.0.1:8000'
 
 const api = axios.create({
   baseURL: BASE_URL,

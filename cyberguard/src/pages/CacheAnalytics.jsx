@@ -97,10 +97,10 @@ const CacheAnalytics = () => {
     misses: d[l.key]?.misses || 0,
   }))
 
-  // Calculate real totals from actual data (not just L1)
+  // Calculate overall hit rate and requests based on cascading L1 entries
   const totalHits = (d.l1?.hits || 0) + (d.l2?.hits || 0) + (d.l3?.hits || 0)
-  const totalMisses = (d.l1?.misses || 0) + (d.l2?.misses || 0) + (d.l3?.misses || 0)
-  const totalRequests = totalHits + totalMisses
+  const totalRequests = (d.l1?.hits || 0) + (d.l1?.misses || 0)
+  const totalMisses = Math.max(0, totalRequests - totalHits)
   const overallHitRate = totalRequests > 0 ? Math.round((totalHits / totalRequests) * 100) : 0
 
   if (loading) {
