@@ -258,7 +258,7 @@ const ScanHistory = () => {
     setLoading(true)
     try {
       const data = await getHistory(100, 0, user?.id)
-      const rawRecords = data.scans || (Array.isArray(data) ? data : [])
+      const rawRecords = data.records || data.scans || (Array.isArray(data) ? data : [])
       const mappedRecords = rawRecords.map(r => ({
         id: r.id,
         timestamp: r.timestamp || '',
