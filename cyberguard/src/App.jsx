@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
 import AppLayout from './layouts/AppLayout'
+import LandingPage from './pages/LandingPage'
 import Dashboard from './pages/Dashboard'
 import URLScanner from './pages/URLScanner'
 import EmailScanner from './pages/EmailScanner'
@@ -36,6 +37,9 @@ const App = () => (
         <BrowserRouter>
           <ToastContainer />
           <Routes>
+            {/* Landing page — first thing user sees */}
+            <Route path="/" element={<LandingPage />} />
+
             {/* Auth pages */}
             <Route path="/login"  element={<Login />}  />
             <Route path="/signup" element={<Signup />} />
@@ -45,10 +49,10 @@ const App = () => (
 
             {/* Main app */}
             <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }>
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }>
               <Route index element={<Dashboard />} />
               <Route path="url-scanner"     element={<URLScanner />}     />
               <Route path="email-scanner"   element={<EmailScanner />}   />
@@ -56,13 +60,12 @@ const App = () => (
               <Route path="cache"           element={<CacheAnalytics />} />
               <Route path="settings"        element={<Settings />}       />
               {/* Scan History: authenticated users only, guests are redirected */}
-              <Route path="history"         element={
+              <Route path="history" element={
                 <AuthOnlyRoute><ScanHistory /></AuthOnlyRoute>
               } />
             </Route>
 
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
