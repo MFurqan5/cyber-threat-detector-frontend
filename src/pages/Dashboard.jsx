@@ -23,20 +23,20 @@ const EMPTY_PIE_DATA = [{ name: 'No Data', value: 100 }]
 // ── Function to normalize minute-based data to hourly ────────────────────────
 const normalizeToHourly = (data) => {
   if (!data || data.length === 0) return EMPTY_AREA_DATA
-  
+
   // Check if data is already in hourly format (HH:00)
   const isHourly = data.every(item => item.hour && item.hour.endsWith(':00'))
   if (isHourly) return data
-  
+
   // If not hourly, it's minute-based (HH:MM) - aggregate to hours
   const hourlyMap = {}
-  
+
   // Initialize with 24 hours
   for (let i = 0; i < 24; i++) {
     const hour = `${String(i).padStart(2, '0')}:00`
     hourlyMap[hour] = { hour, scans: 0, threats: 0 }
   }
-  
+
   // Aggregate minute data into hours
   data.forEach(item => {
     let hourKey = item.hour
@@ -48,7 +48,7 @@ const normalizeToHourly = (data) => {
       hourlyMap[hourKey].threats += (item.threats || 0)
     }
   })
-  
+
   // Return as array in order (00:00 to 23:00)
   return Object.values(hourlyMap)
 }
@@ -89,7 +89,7 @@ const injectStyles = () => {
 
 const Dashboard = () => {
   const { theme } = useTheme()
-  const { user, guest } = useAuth()
+  const { user, guest, isLoggedIn } = useAuth()
   const { guestStats, remainingScans } = useGuestScan()
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
@@ -158,9 +158,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (guest) { setLoading(false); return }
-    const fetchStats = user ? getDashboardStats : getStats
+    const fetchStats = isLoggedIn ? getDashboardStats : getStats
     fetchStats().then(setStats).catch((err) => { setError(err.message); setStats(fallback) }).finally(() => setLoading(false))
-  }, [user, guest])
+  }, [isLoggedIn, guest])
 
   const displayStats = guest ? guestStats : stats
 
