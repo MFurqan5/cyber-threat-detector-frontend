@@ -41,7 +41,7 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
 
             {/* Auth pages */}
-            <Route path="/login"  element={<Login />}  />
+            <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
             {/* Admin — completely separate, no sidebar */}
@@ -54,14 +54,14 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<Dashboard />} />
-              <Route path="url-scanner"     element={<URLScanner />}     />
-              <Route path="email-scanner"   element={<EmailScanner />}   />
+              <Route path="url-scanner" element={<URLScanner />} />
+              <Route path="email-scanner" element={<EmailScanner />} />
               <Route path="malware-scanner" element={<MalwareScanner />} />
-              <Route path="cache"           element={<CacheAnalytics />} />
-              <Route path="settings"        element={<Settings />}       />
+              <Route path="cache" element={<CacheAnalytics />} />
+              <Route path="settings" element={<Settings />} />
               {/* Scan History: authenticated users only, guests are redirected */}
               <Route path="history" element={
-                <AuthOnlyRoute><ScanHistory /></AuthOnlyRoute>
+                <ProtectedRoute><ScanHistory /></ProtectedRoute>
               } />
             </Route>
 
