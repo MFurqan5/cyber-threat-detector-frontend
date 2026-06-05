@@ -215,8 +215,8 @@ const Dashboard = () => {
         {[
           { icon: BarChart2, label: 'Total Scans', value: isGuestEmpty ? '0' : (displayStats?.total_scans?.toLocaleString() || '0'), color: isGuestEmpty ? emptyGrey : theme.accent, emptyMsg: 'No scans performed yet' },
           { icon: AlertTriangle, label: 'Threats Detected', value: isGuestEmpty ? '0' : (displayStats?.threats_detected?.toLocaleString() || '0'), color: isGuestEmpty ? emptyGrey : theme.danger, emptyMsg: 'Waiting for first analysis' },
-          { icon: ShieldCheck, label: 'Safe Results', value: isGuestEmpty ? '0' : (displayStats?.safe_requests?.toLocaleString() || '0'), color: isGuestEmpty ? emptyGrey : theme.safe, emptyMsg: 'Scan activity will appear here' },
-          { icon: Zap, label: 'Security Score', value: isGuestEmpty ? 'N/A' : `${Math.min(100, Math.round(((displayStats?.safe_requests || 0) / Math.max(1, displayStats?.total_scans || 1)) * 100))}%`, color: isGuestEmpty ? emptyGrey : theme.warning, emptyMsg: 'Start a scan for insights' },
+          { icon: ShieldCheck, label: 'Cache Hits', value: isGuestEmpty ? '0' : (displayStats?.personal_cache_hits?.toLocaleString() || '0'), color: isGuestEmpty ? emptyGrey : theme.safe, emptyMsg: 'Scan activity will appear here' },
+          { icon: Zap, label: 'Cache Efficiency', value: isGuestEmpty ? 'N/A' : (isGuestWithData ? '0%' : `${displayStats?.personal_cache_hit_rate || 0}%`), color: isGuestEmpty ? emptyGrey : theme.warning, emptyMsg: 'Start a scan for insights' },
         ].map(({ icon: Icon, label, value, color, delta, emptyMsg }, i) => (
           <motion.div key={label}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
