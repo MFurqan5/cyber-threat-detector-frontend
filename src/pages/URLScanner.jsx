@@ -163,12 +163,19 @@ const URLScanner = () => {
   const [recentUrls] = useState(['https://paypal-secure-login.ru/verify','https://google.com','https://suspicious-bank-login.tk/account'])
 
   const handleScan = async () => {
-    if (!url.trim()) return
+    const trimmedUrl = url.trim()
+    if (!trimmedUrl) return
+
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+      setError('Please enter a valid URL starting with http:// or https://')
+      return
+    }
+
     // Enforce guest scan limit
     if (guest && !canScan) { setLimitReached(true); return }
     setLoading(true); setResult(null); setError(null); setLimitReached(false)
     try {
-      const data = await scanUrl(url.trim())
+      const data = await scanUrl(trimmedUrl)
       setResult(data)
       // Track scan for guest dashboard
       if (guest) {
