@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart2, Shield, AlertTriangle, Zap, Database,
   Users, FileText, Server, RefreshCw, Download,
-  CheckCircle, XCircle, AlertCircle, Activity,
-  Clock, Globe, Mail, LogOut, Lock, Cpu,
+  CheckCircle, Activity,
+  Clock, Globe, Mail, File, Smartphone, LogOut, Lock, Cpu,
 } from 'lucide-react'
 import {
   AreaChart, Area, PieChart, Pie, Cell,
@@ -15,64 +15,14 @@ import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from '../components/ui/ThemeSwitcher'
 import AnimatedBackground from '../components/ui/AnimatedBackground'
+import { getAdminStats, getAdminHistory, getAdminCacheStatus } from '../services/api'
+import { useNavigate } from 'react-router-dom'
 
 const ADMIN_EMAIL    = 'admin@cyberguard.ai'
 const ADMIN_PASSWORD = 'admin123'
 
-// ─── Demo data ─────────────────────────────────────────────────────────────────
-const DEMO = {
-  stats: { totalScansToday: 1284, threatsDetected: 187, safeResults: 1097, uptime: '99.8%' },
-  cache: {
-    l1: { hits: 8420, misses: 1840, hitRate: 82, avgMs: 0.3 },
-    l2: { hits: 7280, misses: 2960, hitRate: 71, avgMs: 4.8 },
-    l3: { hits: 5940, misses: 4300, hitRate: 58, avgMs: 14.2 },
-    origin: { hits: 1240, misses: 0, hitRate: 100, avgMs: 52.1 },
-  },
-  pieData: [
-    { name: 'Phishing', value: 38, color: '#f43f5e' },
-    { name: 'Spam',     value: 24, color: '#f59e0b' },
-    { name: 'Malware',  value: 21, color: '#6366f1' },
-    { name: 'Clean',    value: 17, color: '#10b981' },
-  ],
-  lineData: [
-    { day: 'Mon', threats: 24 }, { day: 'Tue', threats: 38 },
-    { day: 'Wed', threats: 31 }, { day: 'Thu', threats: 52 },
-    { day: 'Fri', threats: 44 }, { day: 'Sat', threats: 19 },
-    { day: 'Sun', threats: 28 },
-  ],
-  hourData: [
-    { hour: '00', scans: 12 }, { hour: '03', scans: 8  },
-    { hour: '06', scans: 34 }, { hour: '09', scans: 89 },
-    { hour: '12', scans: 124},{ hour: '15', scans: 156 },
-    { hour: '18', scans: 98 }, { hour: '21', scans: 67 },
-  ],
-  liveFeed: [
-    { id: 1, input: 'https://paypal-secure.ru', type: 'url',   result: 'malicious', confidence: 0.97, layer: 'L1',     ms: 0.3,  time: '14:32:11' },
-    { id: 2, input: 'Congratulations winner!', type: 'email', result: 'spam',      confidence: 0.99, layer: 'Model',  ms: 48.2, time: '14:31:55' },
-    { id: 3, input: 'https://google.com',      type: 'url',   result: 'safe',      confidence: 0.95, layer: 'L2',     ms: 4.1,  time: '14:31:44' },
-    { id: 4, input: 'Hi, meeting at 3pm',      type: 'email', result: 'safe',      confidence: 0.91, layer: 'L1',     ms: 0.3,  time: '14:31:30' },
-    { id: 5, input: 'https://malware-dist.tk', type: 'url',   result: 'malicious', confidence: 0.94, layer: 'Model',  ms: 51.0, time: '14:31:18' },
-    { id: 6, input: 'https://github.com',      type: 'url',   result: 'safe',      confidence: 0.98, layer: 'L3',     ms: 13.2, time: '14:31:05' },
-  ],
-  users: [
-    { id: 1, name: 'Sarah Ahmed',   email: 'sarah@org.com',  scans: 284, lastLogin: '2 min ago',   role: 'analyst', active: true  },
-    { id: 2, name: 'John Malik',    email: 'john@org.com',   scans: 156, lastLogin: '1 hr ago',    role: 'user',    active: true  },
-    { id: 3, name: 'Zara Khan',     email: 'zara@org.com',   scans: 423, lastLogin: '3 hrs ago',   role: 'analyst', active: true  },
-    { id: 4, name: 'Omar Sheikh',   email: 'omar@org.com',   scans: 89,  lastLogin: '1 day ago',   role: 'user',    active: false },
-    { id: 5, name: 'Fatima Noor',   email: 'fatima@org.com', scans: 612, lastLogin: '5 min ago',   role: 'analyst', active: true  },
-  ],
-  threatLogs: [
-    { id: 1, input: 'https://paypal-secure-verify.ru/login', severity: 'critical', action: 'blocked',  indicators: ['brand_impersonation','suspicious_tld','login_form'], explanation: 'Domain mimics PayPal with suspicious TLD and login credential harvesting form detected.', time: '14:32:11' },
-    { id: 2, input: 'URGENT: Your account suspended...',    severity: 'high',     action: 'flagged',   indicators: ['urgency_language','credential_request','suspicious_sender'], explanation: 'Email uses urgency tactics to extract credentials. Sender domain is not associated with any known service.', time: '14:28:44' },
-    { id: 3, input: 'https://malware-dist.tk/download.exe', severity: 'critical', action: 'blocked',   indicators: ['malware_host','executable_download','suspicious_tld'], explanation: 'Known malware distribution host with direct executable download link on suspicious TLD.', time: '14:22:05' },
-  ],
-  health: {
-    postgres: { status: 'healthy', records: 14820, version: 'PostgreSQL 15.2' },
-    redis:    { status: 'healthy', records: 8420,  version: 'Redis 7.0'       },
-    mongodb:  { status: 'healthy', records: 5940,  version: 'MongoDB 6.0'     },
-    model:    { urlVersion: 'url_model_v1.2.pkl', emailVersion: 'email_model_v1.1.pkl' },
-  },
-}
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+const PIE_COLORS = { Phishing: '#f43f5e', Spam: '#f59e0b', Malware: '#6366f1', Clean: '#10b981' }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 const Card = ({ children, className = '', style = {} }) => {
@@ -127,17 +77,36 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-// ─── CSV Export ────────────────────────────────────────────────────────────────
-const exportCSV = () => {
+const ScanTypeIcon = ({ type }) => {
+  const { theme } = useTheme()
+  const size = 11
+  switch (type?.toLowerCase()) {
+    case 'url':   return <Globe size={size} style={{ color: theme.accent }} />
+    case 'email': return <Mail size={size} style={{ color: theme.warning }} />
+    case 'file':  return <File size={size} style={{ color: theme.accent }} />
+    case 'app':   return <Smartphone size={size} style={{ color: theme.warning }} />
+    default:      return <Globe size={size} style={{ color: theme.accent }} />
+  }
+}
+
+// ─── CSV Export (uses live data passed in) ────────────────────────────────────
+const buildCSV = (records) => {
   const rows = [
-    ['Timestamp', 'Type', 'Input', 'Result', 'Confidence', 'Layer', 'Response(ms)'],
-    ...DEMO.liveFeed.map(r => [r.time, r.type, r.input, r.result, `${Math.round(r.confidence * 100)}%`, r.layer, r.ms]),
+    ['Timestamp', 'Type', 'Input', 'Status', 'Confidence', 'Inference(ms)'],
+    ...(records || []).map(r => [
+      r.timestamp || '',
+      r.input_type || '',
+      r.input_value || '',
+      r.status || '',
+      r.confidence_score ? `${Math.round(r.confidence_score * 100)}%` : '',
+      r.inference_ms || '',
+    ]),
   ]
   const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url; a.download = `cyberguard-admin-export-${Date.now()}.csv`; a.click()
+  a.href = url; a.download = `cyberguard-admin-${Date.now()}.csv`; a.click()
   URL.revokeObjectURL(url)
 }
 
@@ -186,7 +155,7 @@ const AdminLogin = ({ onLogin }) => {
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm mb-4"
                 style={{ background: `${theme.danger}10`, border: `1px solid ${theme.danger}30`, color: theme.danger }}>
-                <AlertCircle size={14} className="shrink-0" />{error}
+                <Shield size={14} className="shrink-0" />{error}
               </motion.div>
             )}
           </AnimatePresence>
@@ -222,46 +191,93 @@ const AdminLogin = ({ onLogin }) => {
 // ─── Main admin dashboard ──────────────────────────────────────────────────────
 const AdminDashboardContent = ({ onLogout }) => {
   const { theme } = useTheme()
-  const [liveFeed, setLiveFeed] = useState(DEMO.liveFeed)
-  const [users, setUsers] = useState(DEMO.users)
-  const [refreshing, setRefreshing] = useState(false)
-  const feedTypes = ['url', 'email']
-  const feedResults = ['safe', 'malicious', 'spam']
-  const feedLayers = ['L1', 'L2', 'L3', 'Model']
 
-  // Auto-refresh live feed every 5s
+  // ── State ────────────────────────────────────────────────────────────────────
+  const [stats, setStats] = useState(null)
+  const [cache, setCache] = useState(null)
+  const [liveFeed, setLiveFeed] = useState([])
+  const [loadingStats, setLoadingStats] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState(null)
+  const [lastUpdated, setLastUpdated] = useState(null)
+
+  // ── Fetch all data ───────────────────────────────────────────────────────────
+  const fetchAll = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    try {
+      const [statsData, cacheData, historyData] = await Promise.all([
+        getAdminStats(24),
+        getAdminCacheStatus(),
+        getAdminHistory(10, 0, null, false),
+      ])
+      setStats(statsData)
+      setCache(cacheData)
+      setLiveFeed(historyData?.records || [])
+      setError(null)
+      setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false }))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingStats(false)
+      setRefreshing(false)
+    }
+  }, [])
+
+  // Initial load
+  useEffect(() => { fetchAll() }, [fetchAll])
+
+  // Auto-refresh live feed every 15 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      const newScan = {
-        id: Date.now(),
-        input: Math.random() > 0.5 ? `https://site-${Math.floor(Math.random()*999)}.com` : `Email scan #${Math.floor(Math.random()*999)}`,
-        type: feedTypes[Math.floor(Math.random() * 2)],
-        result: feedResults[Math.floor(Math.random() * 3)],
-        confidence: 0.75 + Math.random() * 0.24,
-        layer: feedLayers[Math.floor(Math.random() * 4)],
-        ms: parseFloat((Math.random() * 60).toFixed(1)),
-        time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      }
-      setLiveFeed(p => [newScan, ...p.slice(0, 9)])
-    }, 5000)
+    const interval = setInterval(async () => {
+      try {
+        const historyData = await getAdminHistory(10, 0, null, false)
+        setLiveFeed(historyData?.records || [])
+        setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false }))
+      } catch (_) {}
+    }, 15000)
     return () => clearInterval(interval)
   }, [])
 
-  const handleRefresh = async () => {
-    setRefreshing(true)
-    await new Promise(r => setTimeout(r, 800))
-    setRefreshing(false)
-  }
+  // ── Derived values ───────────────────────────────────────────────────────────
+  const s = stats || {}
+  const c = cache || {}
 
-  const toggleRole = (id) => {
-    setUsers(p => p.map(u => u.id === id ? { ...u, role: u.role === 'user' ? 'analyst' : 'user' } : u))
-  }
+  const cacheL1 = c.l1 || { hits: 0, misses: 0, hit_rate: 0 }
+  const cacheL2 = c.l2 || { hits: 0, misses: 0, hit_rate: 0 }
+  const cacheL3 = c.l3 || { hits: 0, misses: 0, hit_rate: 0 }
 
-  const toggleActive = (id) => {
-    setUsers(p => p.map(u => u.id === id ? { ...u, active: !u.active } : u))
-  }
+  const pieData = (s.threat_distribution || []).map(item => ({
+    ...item,
+    color: PIE_COLORS[item.name] || '#888',
+  }))
 
-  const pieColors = DEMO.pieData.map(d => d.color)
+  // Build last-7-days threat data from scan_activity grouped by day
+  const weeklyData = (() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const today = new Date().getDay()
+    return Array.from({ length: 7 }, (_, i) => {
+      const dayIdx = (today - 6 + i + 7) % 7
+      return { day: days[dayIdx], threats: 0 }
+    })
+  })()
+
+  // Build hourly bar data from scan_activity (last 24h from backend)
+  const hourData = (s.scan_activity || [])
+    .filter((_, i) => i % 3 === 0) // sample every 3rd hour for readability
+    .map(h => ({ hour: h.hour?.substring(0, 2) || '00', scans: h.scans || 0 }))
+
+  if (loadingStats) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: theme.bgPrimary }}>
+        <AnimatedBackground />
+        <div className="relative z-10 text-center">
+          <div className="w-12 h-12 rounded-full border-2 border-transparent mx-auto mb-4"
+            style={{ borderTopColor: theme.accent, animation: 'spin 0.8s linear infinite' }} />
+          <p className="text-sm" style={{ color: theme.textMuted }}>Loading admin dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen" style={{ background: theme.bgPrimary }}>
@@ -285,12 +301,17 @@ const AdminDashboardContent = ({ onLogout }) => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handleRefresh}
+            {lastUpdated && (
+              <span className="text-xs hidden sm:block" style={{ color: theme.textMuted }}>
+                Updated {lastUpdated}
+              </span>
+            )}
+            <button onClick={() => fetchAll(true)} disabled={refreshing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all hover:opacity-70"
               style={{ background: theme.surfaceBg, border: `1px solid ${theme.cardBorder}`, color: theme.textSecondary }}>
               <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} /> Refresh
             </button>
-            <button onClick={exportCSV}
+            <button onClick={() => buildCSV(liveFeed)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
               style={{ background: theme.isDark ? `${theme.safe}14` : '#f0fdf4', border: `1px solid ${theme.isDark ? `${theme.safe}30` : '#bbf7d0'}`, color: theme.safe }}>
               <Download size={12} /> Export CSV
@@ -307,13 +328,21 @@ const AdminDashboardContent = ({ onLogout }) => {
 
       <div className="relative z-10 p-6 space-y-6 max-w-7xl mx-auto">
 
+        {/* Error banner */}
+        {error && (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
+            style={{ background: `${theme.warning}10`, border: `1px solid ${theme.warning}28`, color: theme.warning }}>
+            ⚠ Backend error: {error} — showing partial data
+          </div>
+        )}
+
         {/* ── Overview Stats ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: BarChart2, label: 'Total Scans Today',  value: DEMO.stats.totalScansToday.toLocaleString(), color: theme.accent },
-            { icon: AlertTriangle, label: 'Threats Detected', value: DEMO.stats.threatsDetected.toLocaleString(), color: theme.danger },
-            { icon: CheckCircle,   label: 'Safe Results',     value: DEMO.stats.safeResults.toLocaleString(),     color: theme.safe  },
-            { icon: Activity,      label: 'System Uptime',    value: DEMO.stats.uptime,                           color: theme.warning },
+            { icon: BarChart2,    label: 'Total Scans (24h)',   value: (s.total_scans || 0).toLocaleString(),      color: theme.accent  },
+            { icon: AlertTriangle,label: 'Threats Detected',    value: (s.threats_detected || 0).toLocaleString(), color: theme.danger  },
+            { icon: CheckCircle,  label: 'Safe Results',        value: (s.safe_requests || 0).toLocaleString(),    color: theme.safe    },
+            { icon: Zap,          label: 'Avg Response Time',   value: s.avg_time_ms ? `${s.avg_time_ms}ms` : 'N/A', color: theme.warning },
           ].map(({ icon: Icon, label, value, color }, i) => (
             <motion.div key={label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
               className="relative overflow-hidden rounded-2xl p-4"
@@ -331,27 +360,26 @@ const AdminDashboardContent = ({ onLogout }) => {
 
         {/* ── Cache Performance ───────────────────────────────────────────────── */}
         <Card className="p-5">
-          <SectionTitle icon={Zap} title="Cache Performance" subtitle="Live hit rates and response times per layer" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <SectionTitle icon={Zap} title="Cache Performance" subtitle="Real-time hit rates and request counts per layer" />
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { key: 'l1', label: 'L1 Memory',  color: theme.accent },
-              { key: 'l2', label: 'L2 Redis',   color: theme.safe   },
-              { key: 'l3', label: 'L3 MongoDB', color: theme.warning },
-              { key: 'origin', label: 'Origin Model', color: '#a78bfa' },
-            ].map(({ key, label, color }) => {
-              const c = DEMO.cache[key]
+              { key: 'l1', label: 'L1 Memory',  color: theme.accent,   data: cacheL1 },
+              { key: 'l2', label: 'L2 Redis',   color: theme.safe,     data: cacheL2 },
+              { key: 'l3', label: 'L3 MongoDB', color: theme.warning,  data: cacheL3 },
+            ].map(({ key, label, color, data }) => {
+              const pct = Math.round((data.hit_rate || 0) * 100)
               return (
                 <div key={key} className="rounded-xl p-4 text-center"
                   style={{ background: theme.isDark ? `${color}09` : theme.surfaceBg, border: `1px solid ${theme.isDark ? `${color}25` : theme.cardBorder}` }}>
                   <p className="text-xs font-medium mb-2" style={{ color: theme.textMuted }}>{label}</p>
-                  <p className="text-3xl font-bold font-display mb-1" style={{ color }}>{c.hitRate}%</p>
+                  <p className="text-3xl font-bold font-display mb-1" style={{ color }}>{pct}%</p>
                   <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: `${color}18` }}>
-                    <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${c.hitRate}%` }}
+                    <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                       transition={{ duration: 1.2, ease: 'easeOut' }}
                       style={{ background: `linear-gradient(90deg, ${color}70, ${color})` }} />
                   </div>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Hits: <span className="font-semibold" style={{ color }}>{c.hits.toLocaleString()}</span></p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Avg: <span className="font-semibold" style={{ color }}>{c.avgMs}ms</span></p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Hits: <span className="font-semibold" style={{ color }}>{(data.hits || 0).toLocaleString()}</span></p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Misses: <span className="font-semibold" style={{ color: theme.danger }}>{(data.misses || 0).toLocaleString()}</span></p>
                 </div>
               )
             })}
@@ -360,77 +388,87 @@ const AdminDashboardContent = ({ onLogout }) => {
 
         {/* ── Charts Row ──────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Pie */}
+          {/* Pie — Threat Distribution */}
           <Card className="p-5">
-            <SectionTitle icon={BarChart2} title="Threat Breakdown" subtitle="Phishing vs spam vs malware vs clean" />
+            <SectionTitle icon={BarChart2} title="Threat Breakdown" subtitle="All-time distribution across categories" />
             <div style={{ height: '180px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={DEMO.pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value"
-                    label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                  <Pie data={pieData.length ? pieData : [{ name: 'No data', value: 1, color: '#3a3a4a' }]}
+                    cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={pieData.length ? 3 : 0} dataKey="value"
+                    label={pieData.length ? ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                       const r = innerRadius + (outerRadius - innerRadius) * 0.5
                       const x = cx + r * Math.cos(-midAngle * Math.PI / 180)
                       const y = cy + r * Math.sin(-midAngle * Math.PI / 180)
-                      return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight={700}>{`${(percent*100).toFixed(0)}%`}</text>
-                    }} labelLine={false}>
-                    {DEMO.pieData.map((_, i) => <Cell key={i} fill={pieColors[i]} stroke="rgba(0,0,0,0.2)" strokeWidth={1} />)}
+                      return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight={700}>{`${(percent * 100).toFixed(0)}%`}</text>
+                    } : false} labelLine={false}>
+                    {(pieData.length ? pieData : [{ color: '#3a3a4a' }]).map((d, i) => (
+                      <Cell key={i} fill={d.color} stroke="rgba(0,0,0,0.2)" strokeWidth={1} />
+                    ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="grid grid-cols-2 gap-1.5 mt-1">
-              {DEMO.pieData.map(d => (
+              {pieData.length ? pieData.map(d => (
                 <div key={d.name} className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
                   <span className="text-xs" style={{ color: theme.textMuted }}>{d.name}: <span style={{ color: d.color, fontWeight: 600 }}>{d.value}%</span></span>
                 </div>
-              ))}
+              )) : (
+                <p className="col-span-2 text-xs text-center" style={{ color: theme.textMuted }}>No scan data yet</p>
+              )}
             </div>
           </Card>
 
-          {/* Line */}
+          {/* Area — Scan Activity (24h) */}
           <Card className="p-5">
-            <SectionTitle icon={Activity} title="Threats — Last 7 Days" subtitle="Daily threat detection count" />
+            <SectionTitle icon={Activity} title="Scan Activity (24h)" subtitle="Scans and threats per hour" />
             <div style={{ height: '220px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={DEMO.lineData}>
+                <AreaChart data={s.scan_activity || []}>
                   <defs>
-                    <linearGradient id="threatGrad" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="adminScanGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={theme.accent} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.accent} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="adminThreatGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={theme.danger} stopOpacity={0.3} />
                       <stop offset="95%" stopColor={theme.danger} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.isDark ? 'rgba(255,255,255,0.04)' : '#f3f0ff'} />
-                  <XAxis dataKey="day" tick={{ fill: theme.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: theme.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="hour" tick={{ fill: theme.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} interval={5} />
+                  <YAxis tick={{ fill: theme.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="threats" name="Threats" stroke={theme.danger} strokeWidth={2} fill="url(#threatGrad)" dot={false} />
+                  <Area type="monotone" dataKey="scans" name="Scans" stroke={theme.accent} strokeWidth={2} fill="url(#adminScanGrad)" dot={false} />
+                  <Area type="monotone" dataKey="threats" name="Threats" stroke={theme.danger} strokeWidth={2} fill="url(#adminThreatGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </Card>
 
-          {/* Bar */}
+          {/* Bar — Hourly Scan Volumes */}
           <Card className="p-5">
-            <SectionTitle icon={Clock} title="Busiest Scan Hours" subtitle="Scans per hour of the day" />
+            <SectionTitle icon={Clock} title="Scan Volume by Hour" subtitle="Requests per hour (sampled)" />
             <div style={{ height: '220px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={DEMO.hourData}>
+                <BarChart data={hourData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.isDark ? 'rgba(255,255,255,0.04)' : '#f3f0ff'} />
                   <XAxis dataKey="hour" tick={{ fill: theme.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: theme.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="scans" name="Scans" fill={theme.accent} radius={[4,4,0,0]} maxBarSize={32} />
+                  <Bar dataKey="scans" name="Scans" fill={theme.accent} radius={[4, 4, 0, 0]} maxBarSize={32} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </Card>
         </div>
 
-        {/* ── Live Scan Feed ──────────────────────────────────────────────────── */}
+        {/* ── Live Scan Feed (real data, polling every 15s) ─────────────────── */}
         <Card className="overflow-hidden">
           <div className="p-5 pb-0">
-            <SectionTitle icon={Activity} title="Live Scan Feed" subtitle="Auto-refreshes every 5 seconds">
+            <SectionTitle icon={Activity} title="Live Scan Feed" subtitle="Latest 10 scans from all users — refreshes every 15 seconds">
               <div className="flex items-center gap-1.5 text-xs" style={{ color: theme.safe }}>
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: theme.safe, animation: 'pulseDot 1.5s ease-in-out infinite' }} />
                 LIVE
@@ -439,185 +477,180 @@ const AdminDashboardContent = ({ onLogout }) => {
           </div>
           {/* Table header */}
           <div className="grid gap-3 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider"
-            style={{ gridTemplateColumns: '70px 1fr 80px 90px 60px 65px 80px', background: theme.tableHeaderBg, borderTop: `1px solid ${theme.cardBorder}`, color: theme.textMuted }}>
-            <span>Time</span><span>Input</span><span>Type</span><span>Result</span><span>Conf.</span><span>Layer</span><span>Resp.</span>
+            style={{ gridTemplateColumns: '150px 1fr 70px 90px 60px 70px', background: theme.tableHeaderBg, borderTop: `1px solid ${theme.cardBorder}`, color: theme.textMuted }}>
+            <span>Timestamp</span><span>Input</span><span>Type</span><span>Result</span><span>Conf.</span><span>Time(ms)</span>
           </div>
           <AnimatePresence>
-            {liveFeed.map((scan, i) => {
-              const isSafe = scan.result === 'safe'
-              const c = isSafe ? theme.safe : scan.result === 'spam' ? theme.warning : theme.danger
+            {liveFeed.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm" style={{ color: theme.textMuted }}>
+                No scan records yet
+              </div>
+            ) : liveFeed.map((scan, i) => {
+              const status = scan.status || 'safe'
+              const isSafe = status === 'safe'
+              const c = isSafe ? theme.safe : status === 'spam' ? theme.warning : theme.danger
               return (
-                <motion.div key={scan.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25 }}
+                <motion.div key={scan.id || i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25 }}
                   className="grid gap-3 px-5 py-2.5 items-center"
-                  style={{ gridTemplateColumns: '70px 1fr 80px 90px 60px 65px 80px', borderBottom: `1px solid ${theme.tableRowBorder}` }}
+                  style={{ gridTemplateColumns: '150px 1fr 70px 90px 60px 70px', borderBottom: `1px solid ${theme.tableRowBorder}` }}
                   onMouseEnter={e => e.currentTarget.style.background = theme.tableRowHover}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <span className="text-xs font-mono" style={{ color: theme.textMuted }}>{scan.time}</span>
-                  <span className="text-xs font-mono truncate" style={{ color: theme.textSecondary }}>{scan.input}</span>
+                  <span className="text-xs font-mono" style={{ color: theme.textMuted }}>
+                    {scan.timestamp ? scan.timestamp.split('T').join(' ').substring(0, 19) : '—'}
+                  </span>
+                  <span className="text-xs font-mono truncate" style={{ color: theme.textSecondary }}>
+                    {scan.input_value || '—'}
+                  </span>
                   <div className="flex items-center gap-1">
-                    {scan.type === 'url' ? <Globe size={11} style={{ color: theme.accent }} /> : <Mail size={11} style={{ color: theme.warning }} />}
-                    <span className="text-xs uppercase" style={{ color: theme.textSecondary }}>{scan.type}</span>
+                    <ScanTypeIcon type={scan.input_type} />
+                    <span className="text-xs uppercase" style={{ color: theme.textSecondary }}>{scan.input_type || '—'}</span>
                   </div>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full w-fit"
                     style={{ background: `${c}14`, color: c, border: `1px solid ${c}30` }}>
-                    {scan.result}
+                    {status}
                   </span>
-                  <span className="text-xs tabular-nums" style={{ color: theme.textSecondary }}>{Math.round(scan.confidence * 100)}%</span>
-                  <span className="text-xs font-medium px-1.5 py-0.5 rounded text-center"
-                    style={{ background: theme.surfaceBg, color: theme.accent, border: `1px solid ${theme.cardBorder}` }}>
-                    {scan.layer}
+                  <span className="text-xs tabular-nums" style={{ color: theme.textSecondary }}>
+                    {scan.confidence_score ? `${Math.round(scan.confidence_score * 100)}%` : '—'}
                   </span>
-                  <span className="text-xs" style={{ color: theme.textMuted }}>{scan.ms}ms</span>
+                  <span className="text-xs" style={{ color: theme.textMuted }}>
+                    {scan.inference_ms ? `${Math.round(scan.inference_ms)}ms` : '—'}
+                  </span>
                 </motion.div>
               )
             })}
           </AnimatePresence>
         </Card>
 
-        {/* ── User Management ─────────────────────────────────────────────────── */}
-        <Card className="overflow-hidden">
-          <div className="p-5 pb-0">
-            <SectionTitle icon={Users} title="User Management" subtitle="All registered users, roles, and activity" />
-          </div>
-          <div className="grid gap-3 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider"
-            style={{ gridTemplateColumns: '1fr 1fr 80px 100px 90px 80px 70px', background: theme.tableHeaderBg, borderTop: `1px solid ${theme.cardBorder}`, color: theme.textMuted }}>
-            <span>Name</span><span>Email</span><span>Scans</span><span>Last Login</span><span>Role</span><span>Status</span><span>Action</span>
-          </div>
-          {users.map(user => (
-            <div key={user.id} className="grid gap-3 px-5 py-3 items-center"
-              style={{ gridTemplateColumns: '1fr 1fr 80px 100px 90px 80px 70px', borderBottom: `1px solid ${theme.tableRowBorder}` }}
-              onMouseEnter={e => e.currentTarget.style.background = theme.tableRowHover}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <span className="text-xs font-medium" style={{ color: theme.textPrimary }}>{user.name}</span>
-              <span className="text-xs font-mono truncate" style={{ color: theme.textMuted }}>{user.email}</span>
-              <span className="text-xs" style={{ color: theme.textSecondary }}>{user.scans}</span>
-              <span className="text-xs" style={{ color: theme.textMuted }}>{user.lastLogin}</span>
-              <button onClick={() => toggleRole(user.id)}
-                className="text-xs px-2 py-1 rounded-full font-medium w-fit transition-all hover:opacity-80"
-                style={{
-                  background: user.role === 'analyst' ? `${theme.accent}14` : theme.surfaceBg,
-                  color: user.role === 'analyst' ? theme.accent : theme.textMuted,
-                  border: `1px solid ${user.role === 'analyst' ? `${theme.accent}30` : theme.cardBorder}`,
-                }}>
-                {user.role}
-              </button>
-              <div className="flex items-center gap-1.5">
-                <StatusDot ok={user.active} />
-                <span className="text-xs" style={{ color: user.active ? theme.safe : theme.danger }}>
-                  {user.active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <button onClick={() => toggleActive(user.id)}
-                className="text-xs px-2 py-1 rounded-lg transition-all hover:opacity-80"
-                style={{
-                  background: user.active ? `${theme.danger}10` : `${theme.safe}10`,
-                  color: user.active ? theme.danger : theme.safe,
-                  border: `1px solid ${user.active ? `${theme.danger}25` : `${theme.safe}25`}`,
-                }}>
-                {user.active ? 'Deactivate' : 'Activate'}
-              </button>
-            </div>
-          ))}
-        </Card>
-
-        {/* ── Threat Logs ─────────────────────────────────────────────────────── */}
-        <Card className="p-5">
-          <SectionTitle icon={FileText} title="Threat Logs" subtitle="High/critical severity detections with full analysis" />
-          <div className="space-y-3">
-            {DEMO.threatLogs.map(log => (
-              <div key={log.id} className="rounded-xl p-4"
-                style={{ background: `${theme.danger}07`, border: `1px solid ${theme.danger}22` }}>
-                <div className="flex items-start justify-between gap-4 mb-3 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full uppercase"
-                      style={{ background: log.severity === 'critical' ? `${theme.danger}20` : `${theme.warning}15`, color: log.severity === 'critical' ? theme.danger : theme.warning, border: `1px solid ${log.severity === 'critical' ? `${theme.danger}35` : `${theme.warning}30`}` }}>
-                      {log.severity}
-                    </span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full uppercase"
-                      style={{ background: log.action === 'blocked' ? `${theme.danger}15` : `${theme.warning}12`, color: log.action === 'blocked' ? theme.danger : theme.warning }}>
-                      {log.action}
-                    </span>
-                    <span className="text-xs font-mono truncate max-w-xs" style={{ color: theme.textPrimary }}>{log.input}</span>
-                  </div>
-                  <span className="text-xs font-mono" style={{ color: theme.textMuted }}>{log.time}</span>
-                </div>
-                <p className="text-xs leading-relaxed mb-3" style={{ color: theme.textMuted }}>{log.explanation}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {log.indicators.map(ind => (
-                    <span key={ind} className="text-xs px-2 py-0.5 rounded-lg"
-                      style={{ background: `${theme.danger}09`, border: `1px solid ${theme.danger}22`, color: theme.danger }}>
-                      {ind}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* ── System Health ────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-4">
+        {/* ── Scan Type Breakdown ──────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="p-5">
-            <SectionTitle icon={Server} title="System Health" subtitle="Database and service status" />
+            <SectionTitle icon={BarChart2} title="Scans by Type (24h)" subtitle="Breakdown of URL, email, file and app scans" />
             <div className="space-y-3">
               {[
-                { name: 'PostgreSQL', icon: Database, ...DEMO.health.postgres },
-                { name: 'Redis',      icon: Zap,      ...DEMO.health.redis    },
-                { name: 'MongoDB',    icon: Database, ...DEMO.health.mongodb  },
-              ].map(({ name, icon: Icon, status, records, version }) => (
+                { label: 'URL Scans',   value: s.by_type?.url   || 0, color: theme.accent,   icon: Globe },
+                { label: 'Email Scans', value: s.by_type?.email || 0, color: theme.warning,  icon: Mail },
+                { label: 'File Scans',  value: s.by_type?.file  || 0, color: theme.safe,     icon: File },
+                { label: 'App Scans',   value: s.by_type?.app   || 0, color: '#a78bfa',      icon: Smartphone },
+              ].map(({ label, value, color, icon: Icon }) => {
+                const total = (s.total_scans || 1)
+                const pct = Math.round((value / total) * 100)
+                return (
+                  <div key={label}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <Icon size={12} style={{ color }} />
+                        <span className="text-xs font-medium" style={{ color: theme.textSecondary }}>{label}</span>
+                      </div>
+                      <span className="text-xs font-bold" style={{ color }}>{value.toLocaleString()} ({pct}%)</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: `${color}15` }}>
+                      <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                        transition={{ duration: 1.2, ease: 'easeOut' }}
+                        style={{ background: `linear-gradient(90deg, ${color}60, ${color})` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+
+          {/* ── System Health ──────────────────────────────────────────────────── */}
+          <Card className="p-5">
+            <SectionTitle icon={Server} title="System Health" subtitle="Cache layer status based on real response data" />
+            <div className="space-y-3">
+              {[
+                { name: 'L1 Cache (Memory)',   ok: cacheL1.hits + cacheL1.misses > 0, detail: `${cacheL1.hits.toLocaleString()} hits · ${Math.round(cacheL1.hit_rate * 100)}% rate`, color: theme.accent },
+                { name: 'L2 Cache (Redis)',    ok: cacheL2.hits + cacheL2.misses > 0, detail: `${cacheL2.hits.toLocaleString()} hits · ${Math.round(cacheL2.hit_rate * 100)}% rate`, color: theme.safe },
+                { name: 'L3 Cache (MongoDB)',  ok: cacheL3.hits + cacheL3.misses > 0, detail: `${cacheL3.hits.toLocaleString()} hits · ${Math.round(cacheL3.hit_rate * 100)}% rate`, color: theme.warning },
+              ].map(({ name, ok, detail, color }) => (
                 <div key={name} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
                   style={{ background: theme.surfaceBg, border: `1px solid ${theme.cardBorder}` }}>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: `${theme.accent}10`, border: `1px solid ${theme.accent}20` }}>
-                      <Icon size={14} style={{ color: theme.accent }} />
+                      style={{ background: `${color}10`, border: `1px solid ${color}20` }}>
+                      <Database size={14} style={{ color }} />
                     </div>
                     <div>
                       <p className="text-xs font-semibold" style={{ color: theme.textPrimary }}>{name}</p>
-                      <p className="text-xs" style={{ color: theme.textMuted }}>{version} · {records.toLocaleString()} records</p>
+                      <p className="text-xs" style={{ color: theme.textMuted }}>{detail}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <StatusDot ok={status === 'healthy'} />
-                    <span className="text-xs font-medium capitalize" style={{ color: status === 'healthy' ? theme.safe : theme.danger }}>{status}</span>
+                    <StatusDot ok={ok} />
+                    <span className="text-xs font-medium" style={{ color: ok ? theme.safe : theme.danger }}>
+                      {ok ? 'Active' : 'No Data'}
+                    </span>
                   </div>
                 </div>
               ))}
-            </div>
-          </Card>
 
-          <Card className="p-5">
-            <SectionTitle icon={Cpu} title="Model Versions" subtitle="Currently loaded ML models" />
-            <div className="space-y-3">
-              {[
-                { label: 'URL Threat Model', value: DEMO.health.model.urlVersion,   color: theme.accent },
-                { label: 'Email Spam Model', value: DEMO.health.model.emailVersion, color: theme.warning },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="flex items-center justify-between px-3 py-3 rounded-xl"
-                  style={{ background: theme.surfaceBg, border: `1px solid ${theme.cardBorder}` }}>
-                  <div>
-                    <p className="text-xs font-semibold" style={{ color: theme.textPrimary }}>{label}</p>
-                    <p className="text-xs font-mono mt-0.5" style={{ color }}>
-                      {value}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <StatusDot ok={true} />
-                    <span className="text-xs" style={{ color: theme.safe }}>Loaded</span>
-                  </div>
-                </div>
-              ))}
               <div className="px-3 py-3 rounded-xl"
                 style={{ background: `${theme.accent}08`, border: `1px solid ${theme.accent}20` }}>
                 <p className="text-xs" style={{ color: theme.textMuted }}>
-                  Total DB Records: <span className="font-bold" style={{ color: theme.accent }}>
-                    {(DEMO.health.postgres.records + DEMO.health.redis.records + DEMO.health.mongodb.records).toLocaleString()}
+                  Total Cache Hits: <span className="font-bold" style={{ color: theme.accent }}>
+                    {(cacheL1.hits + cacheL2.hits + cacheL3.hits).toLocaleString()}
                   </span>
+                  <span className="ml-3">Total Misses: <span className="font-bold" style={{ color: theme.danger }}>
+                    {(cacheL1.misses + cacheL2.misses + cacheL3.misses).toLocaleString()}
+                  </span></span>
                 </p>
               </div>
             </div>
           </Card>
         </div>
+
+        {/* ── Recent Threat Detections ─────────────────────────────────────────── */}
+        {(() => {
+          const threats = liveFeed.filter(r => r.status === 'malicious' || r.status === 'spam')
+          if (!threats.length) return null
+          return (
+            <Card className="p-5">
+              <SectionTitle icon={FileText} title="Recent Threat Detections" subtitle="Malicious and spam results from live feed" />
+              <div className="space-y-3">
+                {threats.slice(0, 5).map((log, i) => {
+                  const severity = log.confidence_score >= 0.9 ? 'critical' : 'high'
+                  const c = severity === 'critical' ? theme.danger : theme.warning
+                  return (
+                    <div key={log.id || i} className="rounded-xl p-4"
+                      style={{ background: `${c}07`, border: `1px solid ${c}22` }}>
+                      <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full uppercase"
+                            style={{ background: `${c}20`, color: c, border: `1px solid ${c}35` }}>
+                            {severity}
+                          </span>
+                          <span className="text-xs font-mono truncate max-w-xs" style={{ color: theme.textPrimary }}>
+                            {log.input_value || '—'}
+                          </span>
+                        </div>
+                        <span className="text-xs font-mono" style={{ color: theme.textMuted }}>
+                          {log.timestamp ? log.timestamp.substring(0, 19).replace('T', ' ') : '—'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-xs px-2 py-0.5 rounded-lg"
+                          style={{ background: `${c}09`, border: `1px solid ${c}22`, color: c }}>
+                          {log.threat_type || 'unknown'}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded-lg"
+                          style={{ background: `${c}09`, border: `1px solid ${c}22`, color: c }}>
+                          {log.input_type || '—'} scan
+                        </span>
+                        {log.confidence_score && (
+                          <span className="text-xs px-2 py-0.5 rounded-lg"
+                            style={{ background: `${c}09`, border: `1px solid ${c}22`, color: c }}>
+                            {Math.round(log.confidence_score * 100)}% confidence
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )
+        })()}
+
       </div>
     </div>
   )
@@ -626,6 +659,7 @@ const AdminDashboardContent = ({ onLogout }) => {
 // ─── Root export ───────────────────────────────────────────────────────────────
 const AdminDashboard = () => {
   const { logout } = useAuth()
+  const navigate = useNavigate()
   const [loggedIn, setLoggedIn] = useState(() => sessionStorage.getItem('cg-admin') === 'true')
 
   const handleLogin  = () => { sessionStorage.setItem('cg-admin', 'true');  setLoggedIn(true)  }
@@ -633,6 +667,7 @@ const AdminDashboard = () => {
     sessionStorage.removeItem('cg-admin')
     logout()
     setLoggedIn(false)
+    navigate('/login', { replace: true })
   }
 
   return loggedIn

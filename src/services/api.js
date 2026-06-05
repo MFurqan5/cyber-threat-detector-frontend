@@ -100,6 +100,35 @@ export const getStats = () =>
 export const getDashboardStats = () =>
   api.get('/stats/summary/me')
 
+/**
+ * Get global (all-user) summary statistics for admin dashboard
+ * @param {number} hours - Time window in hours (default 24, max 720)
+ * @returns {Promise<{total_scans, threats_detected, safe_requests, cache_hit_rate, scan_activity, threat_distribution, cache, recent_scans, by_type}>}
+ */
+export const getAdminStats = (hours = 24) =>
+  api.get('/stats/summary', { params: { hours } })
+
+/**
+ * Get scan history for admin (all users, with optional filters)
+ * @param {number} limit
+ * @param {number} offset
+ * @param {string|null} scan_type - 'url' | 'email' | 'file' | 'app'
+ * @param {boolean} malicious_only
+ * @returns {Promise<{total, records: Array}>}
+ */
+export const getAdminHistory = (limit = 20, offset = 0, scan_type = null, malicious_only = false) => {
+  const params = { limit, offset, malicious_only }
+  if (scan_type) params.scan_type = scan_type
+  return api.get('/stats/history', { params })
+}
+
+/**
+ * Get cache performance metrics (same as getCacheStatus, aliased for clarity)
+ * @returns {Promise<{l1, l2, l3}>}
+ */
+export const getAdminCacheStatus = () =>
+  api.get('/stats/cache/status')
+
 // ─── History Endpoint ──────────────────────────────────────────────────────────
 
 /**
@@ -114,6 +143,16 @@ export const getHistory = (limit = 50, offset = 0, userId = null) => {
   if (userId) params.user_id = userId
   return api.get('/stats/history', { params })
 }
+
+/**
+ * Get scan history for the currently authenticated user (uses JWT token)
+ * @param {number} limit - Number of records to fetch
+ * @param {number} offset - Pagination offset
+ * @returns {Promise<{records: Array, total: number}>}
+ */
+export const getMyHistory = (limit = 100, offset = 0) =>
+  api.get('/stats/history/me', { params: { limit, offset } })
+
 
 // ─── Cache Status Endpoint ─────────────────────────────────────────────────────
 

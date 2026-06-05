@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { GuestScanProvider } from './context/GuestScanContext'
 import { NotificationProvider } from './context/NotificationContext'
 import AppLayout from './layouts/AppLayout'
 import LandingPage from './pages/LandingPage'
@@ -34,6 +35,7 @@ const App = () => (
   <ThemeProvider>
     <NotificationProvider>
       <AuthProvider>
+        <GuestScanProvider>
         <BrowserRouter>
           <ToastContainer />
           <Routes>
@@ -68,6 +70,7 @@ const App = () => (
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </GuestScanProvider>
       </AuthProvider>
     </NotificationProvider>
   </ThemeProvider>

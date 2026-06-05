@@ -1,9 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Shield, AlertTriangle, Cpu, CheckCircle, X, AlertCircle, Zap } from 'lucide-react'
+import { Mail, Shield, AlertTriangle, Cpu, CheckCircle, X, AlertCircle, Zap, Lock } from 'lucide-react'
 import { scanEmail } from '../services/api'
 import { GlassCard, GlowButton, GlowInput, ConfidenceBar } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import { useGuestScan, GUEST_SCAN_LIMIT } from '../context/GuestScanContext'
+import { useNavigate } from 'react-router-dom'
 
 const SAMPLES = [
   { label: 'Phishing sample', text: `Dear Customer,\n\nYour PayPal account has been temporarily suspended due to suspicious activity.\n\nTo restore your account, verify your identity immediately:\nhttp://paypal-secure-verify.ru/account/restore\n\nComplete within 24 hours or your account will be closed.\n\nPayPal Security Team` },
@@ -13,21 +16,46 @@ const SAMPLES = [
 
 const EmailScanner = () => {
   const { theme } = useTheme()
+  const { guest } = useAuth()
+  const { addGuestScan, canScan, remainingScans } = useGuestScan()
+  const navigate = useNavigate()
   const [emailText, setEmailText] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [limitReached, setLimitReached] = useState(false)
+  const trackedResultRef = useRef(null)
+
+  // Helper to track a scan result for guests (called once per scan)
+  const trackGuestScan = (scanResult) => {
+    if (!guest) return
+    const r = scanResult.result || scanResult
+    addGuestScan({
+      type: 'email',
+      prediction_label: r.prediction_label || 'safe',
+      threat_type: r.threat_type || 'clean',
+      confidence_score: r.confidence_score ?? r.confidence ?? 0.9,
+      from_cache: scanResult.from_cache || r.from_cache || 'none',
+      cache_records: scanResult.cache_records || 0,
+    })
+  }
 
   const handleScan = async () => {
     if (!emailText.trim()) return
-    setLoading(true); setResult(null); setError(null)
+    // Enforce guest scan limit
+    if (guest && !canScan) { setLimitReached(true); return }
+    setLoading(true); setResult(null); setError(null); setLimitReached(false)
+    trackedResultRef.current = null
     try {
-      setResult(await scanEmail(emailText))
+      const data = await scanEmail(emailText)
+      setResult(data)
+      trackGuestScan(data)
+      trackedResultRef.current = data
     } catch (err) {
       setError(err.message)
       const isSpam = /winner|lottery|prize|guaranteed/i.test(emailText)
       const isPhish = /paypal|suspend|verify|account.*restore/i.test(emailText)
-      setResult({
+      const demoResult = {
         result: {
           prediction_label: (isSpam || isPhish) ? 'malicious' : 'safe',
           confidence_score: isSpam ? 0.99 : isPhish ? 0.96 : 0.91,
@@ -39,7 +67,10 @@ const EmailScanner = () => {
             : 'This email appears to be legitimate business communication with no suspicious patterns.',
         },
         source: 'demo',
-      })
+      }
+      setResult(demoResult)
+      trackGuestScan(demoResult)
+      trackedResultRef.current = demoResult
     } finally { setLoading(false) }
   }
 
@@ -100,6 +131,32 @@ const EmailScanner = () => {
               </GlowButton>
             </div>
           </div>
+          {/* Guest remaining scans */}
+          {guest && (
+            <div className="mt-3 flex items-center justify-between">
+              <p className="text-xs" style={{ color: theme.textMuted }}>
+                <Shield size={11} className="inline mr-1" style={{ color: theme.accent }} />
+                Guest Mode · {remainingScans} scan{remainingScans !== 1 ? 's' : ''} remaining
+              </p>
+            </div>
+          )}
+          {/* Guest limit reached banner */}
+          <AnimatePresence>
+            {limitReached && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="mt-3 rounded-xl p-4 text-center"
+                style={{ background: `${theme.warning}08`, border: `1px solid ${theme.warning}25` }}>
+                <Lock size={16} className="mx-auto mb-1.5" style={{ color: theme.warning }} />
+                <p className="text-xs font-semibold mb-1" style={{ color: theme.textPrimary }}>Guest Scan Limit Reached ({GUEST_SCAN_LIMIT}/{GUEST_SCAN_LIMIT})</p>
+                <p className="text-xs mb-2" style={{ color: theme.textMuted }}>Create a free account for unlimited scanning.</p>
+                <motion.button onClick={() => navigate('/signup')}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold"
+                  style={{ background: theme.isDark ? `${theme.accent}dd` : theme.accent, color: '#fff', border: 'none' }}
+                >Create Free Account</motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </GlassCard>
 
         {/* Right: results */}

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Globe, Shield, AlertTriangle, Search, Zap, CheckCircle } from 'lucide-react'
+import { Globe, Shield, AlertTriangle, Search, Zap, CheckCircle, Lock } from 'lucide-react'
 import { scanUrl } from '../services/api'
 import { GlassCard, GlowButton, GlowInput } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import { useGuestScan, GUEST_SCAN_LIMIT } from '../context/GuestScanContext'
+import { useNavigate } from 'react-router-dom'
 
 const SCAN_MESSAGES = [
   'Resolving domain signature...','Analyzing URL structure...',
@@ -149,17 +152,36 @@ const ResultCard = ({ result }) => {
 
 const URLScanner = () => {
   const { theme } = useTheme()
+  const { guest } = useAuth()
+  const { addGuestScan, canScan, remainingScans } = useGuestScan()
+  const navigate = useNavigate()
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [limitReached, setLimitReached] = useState(false)
   const [recentUrls] = useState(['https://paypal-secure-login.ru/verify','https://google.com','https://suspicious-bank-login.tk/account'])
 
   const handleScan = async () => {
     if (!url.trim()) return
-    setLoading(true); setResult(null); setError(null)
+    // Enforce guest scan limit
+    if (guest && !canScan) { setLimitReached(true); return }
+    setLoading(true); setResult(null); setError(null); setLimitReached(false)
     try {
-      const data = await scanUrl(url.trim()); setResult(data)
+      const data = await scanUrl(url.trim())
+      setResult(data)
+      // Track scan for guest dashboard
+      if (guest) {
+        const r = data.result || data
+        addGuestScan({
+          type: 'url',
+          prediction_label: r.prediction_label || (r.is_malicious ? 'malicious' : 'safe'),
+          threat_type: r.threat_type || r.status || 'clean',
+          confidence_score: r.confidence_score ?? r.confidence ?? 0.9,
+          from_cache: data.from_cache || r.from_cache || 'none',
+          cache_records: data.cache_records || 0,
+        })
+      }
     } catch (err) {
       setError(err.message || 'Failed to scan URL. Please ensure the backend is running.')
     } finally { setLoading(false) }
@@ -201,7 +223,42 @@ const URLScanner = () => {
             ))}
           </div>
         </div>
+        {/* Guest remaining scans */}
+        {guest && (
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs" style={{ color: theme.textMuted }}>
+              <Shield size={11} className="inline mr-1" style={{ color: theme.accent }} />
+              Guest Mode · {remainingScans} scan{remainingScans !== 1 ? 's' : ''} remaining
+            </p>
+          </div>
+        )}
       </GlassCard>
+
+      {/* Guest limit reached banner */}
+      <AnimatePresence>
+        {limitReached && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="rounded-2xl p-5 text-center"
+            style={{ background: `${theme.warning}08`, border: `1px solid ${theme.warning}25` }}
+          >
+            <Lock size={20} className="mx-auto mb-2" style={{ color: theme.warning }} />
+            <p className="text-sm font-semibold font-display mb-1" style={{ color: theme.textPrimary }}>
+              Guest Scan Limit Reached ({GUEST_SCAN_LIMIT}/{GUEST_SCAN_LIMIT})
+            </p>
+            <p className="text-xs mb-3" style={{ color: theme.textMuted }}>
+              Create a free account to continue scanning with unlimited access.
+            </p>
+            <motion.button onClick={() => navigate('/signup')}
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              className="px-5 py-2.5 rounded-xl text-xs font-semibold font-display"
+              style={{ background: theme.isDark ? `${theme.accent}dd` : theme.accent, color: '#fff', boxShadow: `0 0 16px ${theme.accent}40`, border: 'none' }}
+            >Create Free Account</motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {loading && (

@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   History, Globe, Mail, Search, RefreshCw,
   ChevronDown, Filter, FileText, FileSpreadsheet,
-  Calendar, X, Package,
+  Calendar, X, Package, UserX,
 } from 'lucide-react'
-import { getHistory } from '../services/api'
+import { getHistory, getMyHistory } from '../services/api'
 import { GlassCard, StatusPill } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
+import { useGuestScan } from '../context/GuestScanContext'
 
 // ─── PDF Export — light theme style ──────────────────────────────────────────
 const exportToPDF = async (rows) => {
@@ -193,40 +194,6 @@ const DateRangePicker = ({ startDate, endDate, onStartChange, onEndChange, onCle
   </div>
 )
 
-// ─── Fallback data (includes app type) ───────────────────────────────────────
-const generateFallback = () => {
-  const types = ['url', 'email', 'app']
-  const statuses = ['safe', 'malicious', 'malicious', 'safe', 'safe']
-  const threatMap = { safe: 'clean', malicious: 'phishing' }
-  const emailThreats = ['spam', 'phishing', 'clean', 'clean', 'spam']
-  const appNames = ['WhatsApp', 'FakeBank Pro', 'Instagram', 'MalwareApp99', 'Spotify']
-  const now = new Date()
-
-  return Array.from({ length: 45 }, (_, i) => {
-    const type = types[i % 3]
-    const status = statuses[i % 5]
-    // parse real date so timestamp sort works
-    const d = new Date(now - i * 9 * 60000)
-    const timestamp = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    return {
-      id: i + 1,
-      timestamp,
-      _date: d,
-      input_type: type,
-      status,
-      threat_type: type === 'url'   ? threatMap[status]
-                 : type === 'email' ? emailThreats[i % 5]
-                 :                    (status === 'malicious' ? 'malware' : 'clean'),
-      confidence_score: 0.72 + Math.random() * 0.27,
-      input_value: type === 'url'
-        ? (status === 'malicious' ? `https://suspicious-${['login','verify','secure'][i % 3]}-${i}.${['ru','tk','xyz'][i % 3]}/` : `https://site-${i}.com/`)
-        : type === 'email'
-        ? `Email body sample #${i + 1}`
-        : appNames[i % 5],
-    }
-  })
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 const FILTERS = ['All', 'URL', 'Email', 'App', 'Safe', 'Malicious']
 const PER_PAGE = 15
@@ -242,7 +209,8 @@ const TypeIcon = ({ type, theme }) => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const ScanHistory = () => {
   const { theme } = useTheme()
-  const { user } = useAuth()
+  const { user, guest } = useAuth()
+  const { guestScans } = useGuestScan()
   const [records, setRecords]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -256,8 +224,28 @@ const ScanHistory = () => {
 
   const load = async () => {
     setLoading(true)
+
+    // Guest mode: use only scans performed in this session — no API call
+    if (guest) {
+      const mapped = guestScans.map((s, i) => ({
+        id: s.id || i,
+        timestamp: s.timestamp || '',
+        _date: s.timestamp ? new Date(s.timestamp) : new Date(),
+        input_type: s.type || 'url',
+        status: s.status || 'safe',
+        threat_type: s.threat_type || 'clean',
+        confidence_score: s.confidence_score ?? 0,
+        input_value: s.input_value || '',
+      }))
+      setRecords(mapped)
+      setError(null)
+      setLoading(false)
+      return
+    }
+
+    // Authenticated users: fetch from API using JWT token
     try {
-      const data = await getHistory(100, 0, user?.id)
+      const data = await getMyHistory(100, 0)
       const rawRecords = data.records || data.scans || (Array.isArray(data) ? data : [])
       const mappedRecords = rawRecords.map(r => ({
         id: r.id,
@@ -273,11 +261,11 @@ const ScanHistory = () => {
       setError(null)
     } catch (err) {
       setError(err.message)
-      setRecords(generateFallback())
+      setRecords([])  // empty — no fake fallback data
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [user])
+  useEffect(() => { load() }, [user, guest, guestScans])
 
   const filtered = useMemo(() => {
     return records
@@ -347,7 +335,13 @@ const ScanHistory = () => {
           {error && (
             <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
               style={{ background: `${theme.warning}10`, border: `1px solid ${theme.warning}28`, color: theme.warning }}>
-              ⚠ Backend offline — showing demo data
+              ⚠ Backend offline — showing empty history
+            </div>
+          )}
+          {guest && (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+              style={{ background: `${theme.accent}10`, border: `1px solid ${theme.accent}28`, color: theme.accent }}>
+              <UserX size={12} /> Guest mode — only your session scans are shown
             </div>
           )}
         </div>
@@ -507,7 +501,12 @@ const ScanHistory = () => {
           ) : paged.length === 0 ? (
             <div className="text-center py-16" style={{ color: theme.textMuted }}>
               <History size={32} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">No records found</p>
+              <p className="text-sm font-medium" style={{ color: theme.textPrimary }}>
+                {guest ? 'No scans yet this session' : 'No records found'}
+              </p>
+              <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                {guest ? 'Run a scan and your history will appear here.' : 'Try adjusting your filters.'}
+              </p>
             </div>
           ) : (
             <AnimatePresence>

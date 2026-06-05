@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Shield, Globe, Mail, Database, Zap,
   Lock, BarChart2, CheckCircle2, ArrowRight,
-  ShieldAlert, Menu, X, History,
+  ShieldAlert, Menu, X, History, UserX,
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 import ThemeToggle from '../components/ui/ThemeSwitcher'
 
 const LandingPage = () => {
   const { theme: t } = useTheme()
+  const { loginAsGuest } = useAuth()
+  const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const handleGuest = () => {
+    loginAsGuest()
+    navigate('/dashboard')
+  }
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20)
@@ -106,6 +114,10 @@ const LandingPage = () => {
           <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', padding: '0.75rem 1.75rem', borderRadius: 12, fontSize: '0.95rem', fontWeight: 500, color: t.textSecondary, background: t.cardBg, textDecoration: 'none', border: `1px solid ${t.cardBorder}` }}>
             Sign In
           </Link>
+          <button onClick={handleGuest}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.75rem 1.75rem', borderRadius: 12, fontSize: '0.95rem', fontWeight: 500, color: t.textMuted, background: 'transparent', border: `1px dashed ${t.cardBorder}`, cursor: 'pointer' }}>
+            <UserX size={15} /> Continue as Guest
+          </button>
         </motion.div>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
@@ -217,6 +229,10 @@ const LandingPage = () => {
             <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', padding: '0.75rem 1.75rem', borderRadius: 12, fontSize: '0.95rem', fontWeight: 500, color: t.textSecondary, background: t.cardBg, textDecoration: 'none', border: `1px solid ${t.cardBorder}` }}>
               Sign In
             </Link>
+            <button onClick={handleGuest}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.75rem 1.75rem', borderRadius: 12, fontSize: '0.95rem', fontWeight: 500, color: t.textMuted, background: 'transparent', border: `1px dashed ${t.cardBorder}`, cursor: 'pointer' }}>
+              <UserX size={15} /> Continue as Guest
+            </button>
           </div>
           <p style={{ fontSize: '0.78rem', color: t.textMuted, marginTop: '1.25rem' }}>No credit card · Free to use · TLS 1.3 encrypted</p>
         </div>

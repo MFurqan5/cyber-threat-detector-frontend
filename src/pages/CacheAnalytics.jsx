@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Database, Zap, HardDrive, Server, RefreshCw, TrendingUp } from 'lucide-react'
+import { Database, Zap, HardDrive, Server, RefreshCw, TrendingUp, UserX } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { getCacheStatus } from '../services/api'
 import { GlassCard, SectionHeader } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 
 const CacheAnalytics = () => {
   const { theme } = useTheme()
+  const { guest } = useAuth()
   const [cacheData, setCacheData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -26,13 +28,11 @@ const CacheAnalytics = () => {
     if (isRefresh) setRefreshing(true)
     try {
       const data = await getCacheStatus()
-      console.log('Cache data from API:', data)
       setCacheData(data)
       setError(null)
     } catch (err) {
       console.error('Error loading cache status:', err)
       setError(err.message)
-      // Use empty data instead of demo data
       setCacheData(emptyData)
     } finally {
       setLoading(false)
@@ -40,7 +40,21 @@ const CacheAnalytics = () => {
     }
   }
 
-  useEffect(() => { load() }, [])
+  // Initial load for authenticated users
+  useEffect(() => {
+    if (!guest) load()
+  }, [guest])
+
+  // Auto-refresh every 10 seconds for live data
+  useEffect(() => {
+    if (guest) return
+    const interval = setInterval(() => {
+      getCacheStatus()
+        .then(data => { setCacheData(data); setError(null) })
+        .catch(() => {})
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [guest])
 
   const d = cacheData || emptyData
 
@@ -103,6 +117,30 @@ const CacheAnalytics = () => {
   const totalMisses = Math.max(0, totalRequests - totalHits)
   const overallHitRate = totalRequests > 0 ? Math.round((totalHits / totalRequests) * 100) : 0
 
+  if (guest) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold font-display" style={{ color: theme.textPrimary }}>Cache Analytics</h1>
+          <p className="text-sm mt-1 font-body" style={{ color: theme.textMuted }}>System-wide multi-layer cache performance monitoring</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-24 rounded-2xl"
+          style={{ background: theme.cardBg, border: `1px dashed ${theme.cardBorder}` }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: `${theme.accent}10`, border: `1px solid ${theme.accent}20` }}>
+            <UserX size={28} style={{ color: theme.accent }} />
+          </div>
+          <p className="text-base font-semibold font-display mb-1" style={{ color: theme.textPrimary }}>
+            Cache analytics not available in guest mode
+          </p>
+          <p className="text-sm text-center max-w-xs" style={{ color: theme.textMuted }}>
+            System-wide cache performance data is restricted to authenticated users. Sign in or create an account to view real-time L1, L2, and L3 cache metrics.
+          </p>
+        </div>
+      </motion.div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -120,7 +158,7 @@ const CacheAnalytics = () => {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold font-display" style={{ color: theme.textPrimary }}>Cache Analytics</h1>
-          <p className="text-sm mt-1 font-body" style={{ color: theme.textMuted }}>Multi-layer cache performance monitoring</p>
+          <p className="text-sm mt-1 font-body" style={{ color: theme.textMuted }}>System-wide multi-layer cache performance monitoring</p>
           {error && (
             <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
               style={{ background: `${theme.warning}10`, border: `1px solid ${theme.warning}28`, color: theme.warning }}>
