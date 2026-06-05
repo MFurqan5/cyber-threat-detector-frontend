@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BarChart2, ShieldCheck, AlertTriangle, Zap, Globe, Mail, File, Smartphone, Shield, Search, Lock, ArrowRight } from 'lucide-react'
+import { BarChart2, ShieldCheck, AlertTriangle, Zap, Globe, Mail, File, Smartphone, Shield, Search, Lock, ArrowRight, Info } from 'lucide-react'
 import {
   AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -19,6 +19,39 @@ const EMPTY_AREA_DATA = [
   { hour: '16:00', scans: 0, threats: 0 }, { hour: '20:00', scans: 0, threats: 0 },
 ]
 const EMPTY_PIE_DATA = [{ name: 'No Data', value: 100 }]
+
+// ── Function to normalize minute-based data to hourly ────────────────────────
+const normalizeToHourly = (data) => {
+  if (!data || data.length === 0) return EMPTY_AREA_DATA
+  
+  // Check if data is already in hourly format (HH:00)
+  const isHourly = data.every(item => item.hour && item.hour.endsWith(':00'))
+  if (isHourly) return data
+  
+  // If not hourly, it's minute-based (HH:MM) - aggregate to hours
+  const hourlyMap = {}
+  
+  // Initialize with 24 hours
+  for (let i = 0; i < 24; i++) {
+    const hour = `${String(i).padStart(2, '0')}:00`
+    hourlyMap[hour] = { hour, scans: 0, threats: 0 }
+  }
+  
+  // Aggregate minute data into hours
+  data.forEach(item => {
+    let hourKey = item.hour
+    if (hourKey && hourKey.includes(':')) {
+      hourKey = hourKey.split(':')[0] + ':00'
+    }
+    if (hourlyMap[hourKey]) {
+      hourlyMap[hourKey].scans += (item.scans || 0)
+      hourlyMap[hourKey].threats += (item.threats || 0)
+    }
+  })
+  
+  // Return as array in order (00:00 to 23:00)
+  return Object.values(hourlyMap)
+}
 
 // ── Inject keyframe animations once ───────────────────────────────────────────
 const injectStyles = () => {
@@ -174,7 +207,6 @@ const Dashboard = () => {
     </div>
   )
 
-  const emptyGrey = theme.isDark ? '#3a3a4a' : '#d1d5db'
   const SCAN_ACTIONS = [
     { icon: Globe, label: 'Scan URL', sub: 'Check links for phishing', color: theme.accent, route: '/dashboard/url-scanner' },
     { icon: Mail, label: 'Scan Email', sub: 'Detect spam & malware', color: theme.warning, route: '/dashboard/email-scanner' },
@@ -213,10 +245,22 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: BarChart2, label: 'Total Scans', value: isGuestEmpty ? '0' : (displayStats?.total_scans?.toLocaleString() || '0'), color: isGuestEmpty ? emptyGrey : theme.accent, emptyMsg: 'No scans performed yet' },
-          { icon: AlertTriangle, label: 'Threats Detected', value: isGuestEmpty ? '0' : (displayStats?.threats_detected?.toLocaleString() || '0'), color: isGuestEmpty ? emptyGrey : theme.danger, emptyMsg: 'Waiting for first analysis' },
-          { icon: ShieldCheck, label: 'Cache Hits', value: isGuestEmpty ? '0' : (displayStats?.personal_cache_hits?.toLocaleString() || '0'), color: isGuestEmpty ? emptyGrey : theme.safe, emptyMsg: 'Scan activity will appear here' },
-          { icon: Zap, label: 'Cache Efficiency', value: isGuestEmpty ? 'N/A' : (isGuestWithData ? '0%' : `${displayStats?.personal_cache_hit_rate || 0}%`), color: isGuestEmpty ? emptyGrey : theme.warning, emptyMsg: 'Start a scan for insights' },
+          { icon: BarChart2, label: 'Total Scans', value: isGuestEmpty ? '0' : (displayStats?.total_scans?.toLocaleString() || '0'), color: theme.accent, emptyMsg: 'No scans performed yet' },
+          { icon: AlertTriangle, label: 'Threats Detected', value: isGuestEmpty ? '0' : (displayStats?.threats_detected?.toLocaleString() || '0'), color: theme.danger, emptyMsg: 'Waiting for first analysis' },
+          {
+            icon: ShieldCheck,
+            label: 'Cache Hits',
+            value: guest ? 'Not available in guest mode' : (displayStats?.personal_cache_hits?.toLocaleString() || '0'),
+            color: theme.safe,
+            emptyMsg: guest ? 'Sign in to see cache analytics' : 'Scan activity will appear here'
+          },
+          {
+            icon: Zap,
+            label: 'Cache Efficiency',
+            value: guest ? 'N/A' : (isGuestEmpty ? 'N/A' : (isGuestWithData ? '0%' : `${displayStats?.personal_cache_hit_rate || 0}%`)),
+            color: theme.warning,
+            emptyMsg: guest ? 'Sign in for cache analytics' : 'Start a scan for insights'
+          },
         ].map(({ icon: Icon, label, value, color, delta, emptyMsg }, i) => (
           <motion.div key={label}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -224,22 +268,20 @@ const Dashboard = () => {
             whileHover={{ y: -3 }}
             className="relative overflow-hidden rounded-2xl p-5 cursor-default"
             style={{
-              background: isGuestEmpty ? (theme.isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.015)') : (theme.isDark ? `${color}09` : theme.cardBg),
-              border: `1px solid ${isGuestEmpty ? theme.cardBorder : (theme.isDark ? `${color}28` : theme.cardBorder)}`,
-              boxShadow: isGuestEmpty ? 'none' : (theme.isDark ? `0 0 28px ${color}12` : theme.cardShadow),
+              background: theme.isDark ? `${color}09` : theme.cardBg,
+              border: `1px solid ${theme.isDark ? `${color}28` : theme.cardBorder}`,
+              boxShadow: theme.isDark ? `0 0 28px ${color}12` : theme.cardShadow,
               backdropFilter: theme.cardBlur,
               transition: 'background 0.4s, border-color 0.4s',
             }}>
-            {isGuestEmpty && <div className="cg-shimmer absolute inset-0 pointer-events-none rounded-2xl" />}
-            {isGuestEmpty && <div className="cg-border-pulse absolute inset-0 rounded-2xl pointer-events-none" style={{ boxShadow: `inset 0 0 0 1px ${theme.accent}` }} />}
-            <div className="absolute -right-4 -bottom-4" style={{ opacity: isGuestEmpty ? 0.04 : (theme.isDark ? 0.05 : 0.04), color }}>
+            <div className="absolute -right-4 -bottom-4" style={{ opacity: theme.isDark ? 0.05 : 0.04, color }}>
               <Icon size={80} />
             </div>
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: isGuestEmpty ? (theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)') : `${color}12`, border: `1px solid ${isGuestEmpty ? theme.cardBorder : `${color}28`}` }}>
-                  <Icon size={20} style={{ color: isGuestEmpty ? theme.textMuted : color, opacity: isGuestEmpty ? 0.45 : 1 }} />
+                  style={{ background: `${color}12`, border: `1px solid ${color}28` }}>
+                  <Icon size={20} style={{ color: color }} />
                 </div>
                 {delta !== undefined && (
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full"
@@ -248,9 +290,11 @@ const Dashboard = () => {
                   </span>
                 )}
               </div>
-              <p className="text-2xl font-bold font-display mb-0.5" style={{ color: isGuestEmpty ? (theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)') : color }}>{value}</p>
+              <p className="text-2xl font-bold font-display mb-0.5" style={{ color: label.includes('Cache') ? (label === 'Cache Hits' ? theme.safe : theme.warning) : color, fontSize: guest && label.includes('Cache') ? '1.1rem' : '2rem' }}>{value}</p>
               <p className="text-sm font-body mb-1" style={{ color: theme.textMuted }}>{label}</p>
-              {isGuestEmpty && <p className="text-xs" style={{ color: theme.isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.3)' }}>{emptyMsg}</p>}
+              {((guest && label.includes('Cache')) || (isGuestEmpty && !guest)) && (
+                <p className="text-xs" style={{ color: theme.textMuted }}>{emptyMsg}</p>
+              )}
             </div>
           </motion.div>
         ))}
@@ -258,33 +302,33 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2">
-          <GlassCard className="p-5 h-full" style={isGuestEmpty ? { border: `1px dashed ${theme.cardBorder}` } : {}}>
+          <GlassCard className="p-5 h-full">
             <SectionHeader title="Scan Activity" subtitle={isGuestEmpty ? 'Scan activity will appear here' : 'Scans and threats over the past 24 hours'}>
               <div className="flex items-center gap-3 text-xs" style={{ color: theme.textMuted }}>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: isGuestEmpty ? emptyGrey : theme.accent }} /> Scans</span>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: isGuestEmpty ? emptyGrey : theme.danger }} /> Threats</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: theme.accent }} /> Scans</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: theme.danger }} /> Threats</span>
               </div>
             </SectionHeader>
             <div style={{ height: '220px', position: 'relative' }}>
               {isGuestEmpty && <ChartOverlay message="No scan data available" />}
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={isGuestEmpty ? EMPTY_AREA_DATA : (displayStats?.scan_activity || [])}>
+                <AreaChart data={isGuestEmpty ? EMPTY_AREA_DATA : normalizeToHourly(displayStats?.scan_activity || [])}>
                   <defs>
                     <linearGradient id="scansGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={isGuestEmpty ? emptyGrey : theme.accent} stopOpacity={isGuestEmpty ? 0.08 : 0.3} />
-                      <stop offset="95%" stopColor={isGuestEmpty ? emptyGrey : theme.accent} stopOpacity={0} />
+                      <stop offset="5%" stopColor={theme.accent} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.accent} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="threatsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={isGuestEmpty ? emptyGrey : theme.danger} stopOpacity={isGuestEmpty ? 0.08 : 0.3} />
-                      <stop offset="95%" stopColor={isGuestEmpty ? emptyGrey : theme.danger} stopOpacity={0} />
+                      <stop offset="5%" stopColor={theme.danger} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.danger} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={`${isGuestEmpty ? emptyGrey : theme.accent}08`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={`${theme.accent}08`} />
                   <XAxis dataKey="hour" tick={{ fill: theme.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: theme.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                   {!isGuestEmpty && <Tooltip content={<CustomTooltip />} />}
-                  <Area type="monotone" dataKey="scans" name="Scans" stroke={isGuestEmpty ? emptyGrey : theme.accent} strokeWidth={isGuestEmpty ? 1 : 2} strokeDasharray={isGuestEmpty ? '5 5' : undefined} fill="url(#scansGrad)" dot={false} isAnimationActive={!isGuestEmpty} />
-                  <Area type="monotone" dataKey="threats" name="Threats" stroke={isGuestEmpty ? emptyGrey : theme.danger} strokeWidth={isGuestEmpty ? 1 : 2} strokeDasharray={isGuestEmpty ? '5 5' : undefined} fill="url(#threatsGrad)" dot={false} isAnimationActive={!isGuestEmpty} />
+                  <Area type="monotone" dataKey="scans" name="Scans" stroke={theme.accent} strokeWidth={2} fill="url(#scansGrad)" dot={false} isAnimationActive={!isGuestEmpty} />
+                  <Area type="monotone" dataKey="threats" name="Threats" stroke={theme.danger} strokeWidth={2} fill="url(#threatsGrad)" dot={false} isAnimationActive={!isGuestEmpty} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -292,7 +336,7 @@ const Dashboard = () => {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <GlassCard className="p-5 h-full" style={isGuestEmpty ? { border: `1px dashed ${theme.cardBorder}` } : {}}>
+          <GlassCard className="p-5 h-full">
             <SectionHeader title="Threat Distribution" />
             <div style={{ height: '160px', position: 'relative' }}>
               {isGuestEmpty && <ChartOverlay message="Run a scan to view analytics" />}
@@ -300,7 +344,7 @@ const Dashboard = () => {
                 <PieChart>
                   <Pie
                     data={isGuestEmpty ? EMPTY_PIE_DATA : (displayStats?.threat_distribution || [])}
-                    cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={isGuestEmpty ? 0 : 3} dataKey="value"
+                    cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value"
                     labelLine={false}
                     label={isGuestEmpty ? false : ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                       const r = innerRadius + (outerRadius - innerRadius) * 0.5
@@ -310,10 +354,10 @@ const Dashboard = () => {
                     }}
                     isAnimationActive={!isGuestEmpty}>
                     {isGuestEmpty
-                      ? <Cell fill={emptyGrey} stroke="none" />
+                      ? <Cell fill={theme.accent} stroke="none" />
                       : (displayStats?.threat_distribution || []).map((item) => (
-                          <Cell key={item.name} fill={getThreatColor(item.name)} stroke="rgba(0,0,0,0.2)" strokeWidth={1} />
-                        ))
+                        <Cell key={item.name} fill={getThreatColor(item.name)} stroke="rgba(0,0,0,0.2)" strokeWidth={1} />
+                      ))
                     }
                   </Pie>
                 </PieChart>
@@ -321,17 +365,20 @@ const Dashboard = () => {
             </div>
             <div className="space-y-2 mt-2">
               {isGuestEmpty ? (
-                ['Phishing', 'Malware', 'Spam', 'Clean'].map((name, i) => (
-                  <motion.div key={name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 + i * 0.06 }} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ background: emptyGrey }} />
-                      <span className="text-xs" style={{ color: theme.textMuted }}>{name}</span>
-                    </div>
-                    <div className="h-1.5 w-16 rounded-full overflow-hidden" style={{ background: `${emptyGrey}30` }}>
-                      <div className="cg-shimmer h-full w-full" />
-                    </div>
-                  </motion.div>
-                ))
+                ['Phishing', 'Malware', 'Spam', 'Clean'].map((name, i) => {
+                  const colorMap = { Phishing: theme.warning, Malware: theme.danger, Spam: theme.accent, Clean: theme.safe }
+                  return (
+                    <motion.div key={name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 + i * 0.06 }} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: colorMap[name] }} />
+                        <span className="text-xs" style={{ color: theme.textMuted }}>{name}</span>
+                      </div>
+                      <div className="h-1.5 w-16 rounded-full overflow-hidden" style={{ background: `${colorMap[name]}30` }}>
+                        <div className="cg-shimmer h-full w-full" />
+                      </div>
+                    </motion.div>
+                  )
+                })
               ) : (
                 (displayStats?.threat_distribution || []).map((item) => {
                   const color = getThreatColor(item.name)
@@ -353,43 +400,76 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-2">
-          <GlassCard className="p-5 h-full" style={isGuestEmpty ? { border: `1px dashed ${theme.cardBorder}` } : {}}>
-            <SectionHeader title="Cache Performance" subtitle={isGuestEmpty ? 'Waiting for first analysis' : 'Multi-layer cache efficiency'} />
-            <div className="space-y-5">
-              {[
-                { key: 'l1', label: 'L1 Cache (Memory)', color: theme.accent },
-                { key: 'l2', label: 'L2 Cache (Redis)', color: theme.safe },
-                { key: 'l3', label: 'L3 Cache (MongoDB)', color: theme.warning },
-              ].map(({ key, label, color }, idx) => {
-                const c = displayStats?.cache?.[key] || {}
-                const pct = isGuestEmpty ? 0 : Math.round((c.hit_rate || 0) * 100)
-                const barColor = isGuestEmpty ? emptyGrey : color
-                return (
-                  <motion.div key={key} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + idx * 0.08 }}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-medium" style={{ color: theme.textSecondary }}>{label}</span>
-                      <span className="text-xs font-bold" style={{ color: barColor }}>{isGuestEmpty ? '—' : `${pct}%`}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: `${barColor}15` }}>
-                      {isGuestEmpty ? (
-                        <div className="cg-shimmer h-full w-full" style={{ background: `linear-gradient(90deg, transparent, ${emptyGrey}30, transparent)`, backgroundSize: '200% 100%' }} />
-                      ) : (
-                        <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.2, ease: 'easeOut', delay: 0.5 }} style={{ background: `linear-gradient(90deg, ${barColor}60, ${barColor})`, boxShadow: `0 0 8px ${barColor}50` }} />
-                      )}
-                    </div>
-                    <div className="flex justify-between mt-1">
-                      <span className="text-xs" style={{ color: theme.textMuted }}>Hits: {isGuestEmpty ? '—' : (c.hits || 0).toLocaleString()}</span>
-                      <span className="text-xs" style={{ color: theme.textMuted }}>Misses: {isGuestEmpty ? '—' : (c.misses || 0).toLocaleString()}</span>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </div>
+          <GlassCard className="p-5 h-full">
+            <SectionHeader title="Cache Performance" subtitle={guest ? 'Cache analytics are available for registered users only' : (isGuestEmpty ? 'Waiting for first analysis' : 'Multi-layer cache efficiency')} />
+
+            {guest ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex flex-col items-center justify-center py-8 px-4 text-center"
+                style={{
+                  background: `${theme.textMuted}05`,
+                  borderRadius: '1rem',
+                  border: `1px dashed ${theme.textMuted}25`,
+                }}
+              >
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3" style={{ background: `${theme.textMuted}10` }}>
+                  <Info size={24} style={{ color: theme.textMuted }} />
+                </div>
+                <p className="text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Cache Analytics Unavailable</p>
+                <p className="text-xs" style={{ color: theme.textMuted }}>Cache performance data is only available for registered users.</p>
+                <motion.button
+                  onClick={() => navigate('/signup')}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="mt-4 px-4 py-2 rounded-lg text-xs font-semibold"
+                  style={{
+                    background: `${theme.accent}15`,
+                    border: `1px solid ${theme.accent}30`,
+                    color: theme.accent,
+                  }}
+                >
+                  Sign up for full access
+                </motion.button>
+              </motion.div>
+            ) : (
+              <div className="space-y-5">
+                {[
+                  { key: 'l1', label: 'L1 Cache (Memory)', color: theme.accent },
+                  { key: 'l2', label: 'L2 Cache (Redis)', color: theme.safe },
+                  { key: 'l3', label: 'L3 Cache (MongoDB)', color: theme.warning },
+                ].map(({ key, label, color }, idx) => {
+                  const c = displayStats?.cache?.[key] || {}
+                  const pct = isGuestEmpty ? 0 : Math.round((c.hit_rate || 0) * 100)
+                  return (
+                    <motion.div key={key} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + idx * 0.08 }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-medium" style={{ color: theme.textSecondary }}>{label}</span>
+                        <span className="text-xs font-bold" style={{ color: color }}>{isGuestEmpty ? '0%' : `${pct}%`}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: `${color}15` }}>
+                        {isGuestEmpty ? (
+                          <div className="cg-shimmer h-full w-full" style={{ background: `linear-gradient(90deg, transparent, ${color}30, transparent)`, backgroundSize: '200% 100%' }} />
+                        ) : (
+                          <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.2, ease: 'easeOut', delay: 0.5 }} style={{ background: `linear-gradient(90deg, ${color}60, ${color})`, boxShadow: `0 0 8px ${color}50` }} />
+                        )}
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs" style={{ color: theme.textMuted }}>Hits: {isGuestEmpty ? '0' : (c.hits || 0).toLocaleString()}</span>
+                        <span className="text-xs" style={{ color: theme.textMuted }}>Misses: {isGuestEmpty ? '0' : (c.misses || 0).toLocaleString()}</span>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
           </GlassCard>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="lg:col-span-3">
-          <GlassCard className="p-5 h-full" style={isGuestEmpty ? { border: `1px dashed ${theme.cardBorder}` } : {}}>
+          <GlassCard className="p-5 h-full">
             <SectionHeader title="Recent Scans" subtitle={isGuestEmpty ? 'Start a scan to see activity here' : 'Latest threat detection activity'} />
             {isGuestEmpty ? (
               <div className="space-y-3">

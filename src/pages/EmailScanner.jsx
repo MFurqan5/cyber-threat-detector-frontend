@@ -27,18 +27,28 @@ const EmailScanner = () => {
   const trackedResultRef = useRef(null)
 
   // Helper to track a scan result for guests (called once per scan)
+  // ========== FIXED CODE ==========
   const trackGuestScan = (scanResult) => {
     if (!guest) return
     const r = scanResult.result || scanResult
+    
+    // Determine correct prediction_label from threat_type
+    // If threat_type is LOW_RISK, MEDIUM_RISK, HIGH_RISK, CRITICAL -> malicious
+    let predictionLabel = r.prediction_label || 'safe'
+    if (r.threat_type && r.threat_type !== 'clean' && r.threat_type !== 'CLEAN') {
+      predictionLabel = 'malicious'
+    }
+    
     addGuestScan({
       type: 'email',
-      prediction_label: r.prediction_label || 'safe',
+      prediction_label: predictionLabel,  // ← FIXED: now properly sets 'malicious' for LOW_RISK
       threat_type: r.threat_type || 'clean',
       confidence_score: r.confidence_score ?? r.confidence ?? 0.9,
       from_cache: scanResult.from_cache || r.from_cache || 'none',
       cache_records: scanResult.cache_records || 0,
     })
   }
+  // ========== END FIXED CODE ==========
 
   const handleScan = async () => {
     if (!emailText.trim()) return
