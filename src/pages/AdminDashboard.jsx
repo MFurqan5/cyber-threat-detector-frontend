@@ -15,7 +15,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from '../components/ui/ThemeSwitcher'
 import AnimatedBackground from '../components/ui/AnimatedBackground'
-import { getAdminStats, getAdminHistory, getAdminCacheStatus } from '../services/api'
+import { getAdminStats, getAdminHistory, getAdminCacheStatus, loginUser } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 
 const ADMIN_EMAIL    = 'admin@cyberguard.ai'
@@ -113,6 +113,7 @@ const buildCSV = (records) => {
 // ─── Login screen ──────────────────────────────────────────────────────────────
 const AdminLogin = ({ onLogin }) => {
   const { theme } = useTheme()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -122,13 +123,19 @@ const AdminLogin = ({ onLogin }) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-    await new Promise(r => setTimeout(r, 800))
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      onLogin()
-    } else {
-      setError('Invalid admin credentials.')
+    try {
+      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+        const data = await loginUser(email, password)
+        login(data.access_token, data.user)
+        onLogin()
+      } else {
+        setError('Invalid admin credentials.')
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

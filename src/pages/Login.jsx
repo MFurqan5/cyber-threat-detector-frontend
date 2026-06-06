@@ -31,25 +31,17 @@ const Login = () => {
     setError('')
     setLoading(true)
 
-    // Admin role-based login check
-    if (email === 'admin@cyberguard.ai' && password === 'admin123') {
-      try {
-        sessionStorage.setItem('cg-admin', 'true')
-        login('admin-mock-token', { username: 'Administrator', email: 'admin@cyberguard.ai', role: 'admin' })
-        navigate('/admin')
-      } catch (err) {
-        setError('Error during admin sign in.')
-      } finally {
-        setLoading(false)
-      }
-      return
-    }
-
     try {
       const data = await loginUser(email, password)
       const userData = data.user || { username: data.username || email.split('@')[0], email, role: 'analyst' }
       login(data.access_token, userData)
-      navigate('/dashboard')
+      // Check if admin to redirect appropriately
+      if (userData.role === 'admin') {
+        sessionStorage.setItem('cg-admin', 'true')
+        navigate('/admin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       setError(err.message || 'Invalid email or password.')
     } finally {

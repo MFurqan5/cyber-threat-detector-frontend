@@ -41,7 +41,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = getCookie('cg-token')
-    if (token) {
+    if (token && token !== 'undefined' && token !== 'null') {
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
@@ -97,8 +97,8 @@ export const getStats = () =>
  * Get user-scoped dashboard statistics
  * @returns {Promise<{total_scans, threats_detected, safe_requests, cache_hit_rate, scan_activity, threat_distribution, cache, recent_scans}>}
  */
-export const getDashboardStats = () =>
-  api.get('/stats/summary/me')
+export const getDashboardStats = (hours = 24) =>
+  api.get('/stats/summary/me', { params: { hours } })
 
 /**
  * Get global (all-user) summary statistics for admin dashboard
@@ -162,6 +162,13 @@ export const getMyHistory = (limit = 100, offset = 0) =>
  */
 export const getCacheStatus = () =>
   api.get('/stats/cache/status')
+
+/**
+ * Get per-user cache performance metrics (personalized to logged-in user)
+ * @returns {Promise<{l1: {hits, misses, hit_rate}, l2: {hits, misses, hit_rate}, l3: {hits, misses, hit_rate}}>}
+ */
+export const getMyCacheStatus = () =>
+  api.get('/stats/cache/status/me')
 
 /**
  * Check backend health status

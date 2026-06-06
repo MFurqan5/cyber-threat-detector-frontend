@@ -4,7 +4,7 @@ import { Database, Zap, HardDrive, Server, RefreshCw, TrendingUp, UserX } from '
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { getCacheStatus } from '../services/api'
+import { getMyCacheStatus } from '../services/api'
 import { GlassCard, SectionHeader } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
@@ -27,7 +27,7 @@ const CacheAnalytics = () => {
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
     try {
-      const data = await getCacheStatus()
+      const data = await getMyCacheStatus()
       setCacheData(data)
       setError(null)
     } catch (err) {
@@ -49,7 +49,7 @@ const CacheAnalytics = () => {
   useEffect(() => {
     if (guest) return
     const interval = setInterval(() => {
-      getCacheStatus()
+      getMyCacheStatus()
         .then(data => { setCacheData(data); setError(null) })
         .catch(() => {})
     }, 10000)
@@ -122,7 +122,7 @@ const CacheAnalytics = () => {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold font-display" style={{ color: theme.textPrimary }}>Cache Analytics</h1>
-          <p className="text-sm mt-1 font-body" style={{ color: theme.textMuted }}>System-wide multi-layer cache performance monitoring</p>
+          <p className="text-sm mt-1 font-body" style={{ color: theme.textMuted }}>Your personal multi-layer cache performance</p>
         </div>
         <div className="flex flex-col items-center justify-center py-24 rounded-2xl"
           style={{ background: theme.cardBg, border: `1px dashed ${theme.cardBorder}` }}>
@@ -158,7 +158,7 @@ const CacheAnalytics = () => {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold font-display" style={{ color: theme.textPrimary }}>Cache Analytics</h1>
-          <p className="text-sm mt-1 font-body" style={{ color: theme.textMuted }}>System-wide multi-layer cache performance monitoring</p>
+          <p className="text-sm mt-1 font-body" style={{ color: theme.textMuted }}>Your personal multi-layer cache performance</p>
           {error && (
             <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
               style={{ background: `${theme.warning}10`, border: `1px solid ${theme.warning}28`, color: theme.warning }}>
