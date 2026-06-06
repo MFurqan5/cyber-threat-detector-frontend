@@ -13,7 +13,8 @@ const GUEST_KEY = 'cg-guest'
 // Token lives in sessionStorage → cleared when the browser/tab closes
 // so the app always shows the login page on a fresh start.
 const readToken = () => sessionStorage.getItem(TOKEN_KEY)
-const saveToken = (t) => { sessionStorage.setItem(TOKEN_KEY, t); setCookie(TOKEN_KEY, t, 0) } // session cookie for api.js interceptor
+// FIXED
+const saveToken = (t) => { sessionStorage.setItem(TOKEN_KEY, t); setCookie(TOKEN_KEY, t, 1) } // session cookie for api.js interceptor
 const clearToken = () => { sessionStorage.removeItem(TOKEN_KEY); eraseCookie(TOKEN_KEY) }
 
 const readUser = () => {
