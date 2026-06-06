@@ -5,7 +5,7 @@ import {
   ChevronDown, Filter, FileText, FileSpreadsheet,
   Calendar, X, Package, UserX,
 } from 'lucide-react'
-import { getHistory, getMyHistory } from '../services/api'
+import { getHistory, getMyHistory, getDashboardStats } from '../services/api'
 import { GlassCard, StatusPill } from '../components/ui/UIComponents'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
@@ -221,6 +221,7 @@ const ScanHistory = () => {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate]     = useState('')
   const [exporting, setExporting] = useState(null)
+  const [serverStats, setServerStats] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -245,8 +246,12 @@ const ScanHistory = () => {
 
     // Authenticated users: fetch from API using JWT token
     try {
-      const data = await getMyHistory(100, 0)
-      const rawRecords = data.records || data.scans || (Array.isArray(data) ? data : [])
+      const [historyData, statsData] = await Promise.all([
+        getMyHistory(100, 0),
+        getDashboardStats(720)
+      ]).catch(err => { throw err })
+      
+      const rawRecords = historyData.records || historyData.scans || (Array.isArray(historyData) ? historyData : [])
       const mappedRecords = rawRecords.map(r => ({
         id: r.id,
         timestamp: r.timestamp || '',
@@ -258,6 +263,15 @@ const ScanHistory = () => {
         input_value: r.input || r.input_value || '',
       }))
       setRecords(mappedRecords)
+      
+      // Update true stats using the dashboard summary
+      const sData = statsData.data || statsData
+      if (sData) {
+        setServerStats(sData)
+      } else {
+        // Fallback to the true total if the summary endpoint failed
+        setServerStats({ total_scans: historyData.total || mappedRecords.length })
+      }
       setError(null)
     } catch (err) {
       setError(err.message)
@@ -303,14 +317,26 @@ const ScanHistory = () => {
   const totalPages = Math.ceil(filtered.length / PER_PAGE)
   const paged      = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
 
-  const stats = useMemo(() => ({
-    total:     records.length,
-    safe:      records.filter(r => r.status === 'safe').length,
-    malicious: records.filter(r => r.status === 'malicious').length,
-    urls:      records.filter(r => r.input_type === 'url').length,
-    emails:    records.filter(r => r.input_type === 'email').length,
-    apps:      records.filter(r => r.input_type === 'app').length,
-  }), [records])
+  const stats = useMemo(() => {
+    if (serverStats && !guest) {
+      return {
+        total:     serverStats.total_scans || records.length,
+        safe:      serverStats.safe_requests || records.filter(r => r.status === 'safe').length,
+        malicious: serverStats.malicious_total || records.filter(r => r.status === 'malicious').length,
+        urls:      serverStats.by_type?.url || records.filter(r => r.input_type === 'url').length,
+        emails:    serverStats.by_type?.email || records.filter(r => r.input_type === 'email').length,
+        apps:      serverStats.by_type?.app || records.filter(r => r.input_type === 'app').length,
+      }
+    }
+    return {
+      total:     records.length,
+      safe:      records.filter(r => r.status === 'safe').length,
+      malicious: records.filter(r => r.status === 'malicious').length,
+      urls:      records.filter(r => r.input_type === 'url').length,
+      emails:    records.filter(r => r.input_type === 'email').length,
+      apps:      records.filter(r => r.input_type === 'app').length,
+    }
+  }, [records, serverStats, guest])
 
   const handleExportPDF = async () => {
     setExporting('pdf')
