@@ -89,7 +89,7 @@ const ScanTypeIcon = ({ type }) => {
   }
 }
 
-// ─── CSV Export (uses live data passed in) ────────────────────────────────────
+// ─── CSV Export ────────────────────────────────────────────────────────────────
 const buildCSV = (records) => {
   const rows = [
     ['Timestamp', 'Type', 'Input', 'Status', 'Confidence', 'Inference(ms)'],
@@ -258,19 +258,8 @@ const AdminDashboardContent = ({ onLogout }) => {
     color: PIE_COLORS[item.name] || '#888',
   }))
 
-  // Build last-7-days threat data from scan_activity grouped by day
-  const weeklyData = (() => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const today = new Date().getDay()
-    return Array.from({ length: 7 }, (_, i) => {
-      const dayIdx = (today - 6 + i + 7) % 7
-      return { day: days[dayIdx], threats: 0 }
-    })
-  })()
-
-  // Build hourly bar data from scan_activity (last 24h from backend)
   const hourData = (s.scan_activity || [])
-    .filter((_, i) => i % 3 === 0) // sample every 3rd hour for readability
+    .filter((_, i) => i % 3 === 0)
     .map(h => ({ hour: h.hour?.substring(0, 2) || '00', scans: h.scans || 0 }))
 
   if (loadingStats) {
@@ -472,7 +461,7 @@ const AdminDashboardContent = ({ onLogout }) => {
           </Card>
         </div>
 
-        {/* ── Live Scan Feed (real data, polling every 15s) ─────────────────── */}
+        {/* ── Live Scan Feed ─────────────────────────────────────────────────── */}
         <Card className="overflow-hidden">
           <div className="p-5 pb-0">
             <SectionTitle icon={Activity} title="Live Scan Feed" subtitle="Latest 10 scans from all users — refreshes every 15 seconds">
@@ -482,7 +471,6 @@ const AdminDashboardContent = ({ onLogout }) => {
               </div>
             </SectionTitle>
           </div>
-          {/* Table header */}
           <div className="grid gap-3 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider"
             style={{ gridTemplateColumns: '150px 1fr 70px 90px 60px 70px', background: theme.tableHeaderBg, borderTop: `1px solid ${theme.cardBorder}`, color: theme.textMuted }}>
             <span>Timestamp</span><span>Input</span><span>Type</span><span>Result</span><span>Conf.</span><span>Time(ms)</span>
@@ -665,11 +653,27 @@ const AdminDashboardContent = ({ onLogout }) => {
 
 // ─── Root export ───────────────────────────────────────────────────────────────
 const AdminDashboard = () => {
-  const { logout } = useAuth()
+  const { logout, token } = useAuth()
   const navigate = useNavigate()
-  const [loggedIn, setLoggedIn] = useState(() => sessionStorage.getItem('cg-admin') === 'true')
 
-  const handleLogin  = () => { sessionStorage.setItem('cg-admin', 'true');  setLoggedIn(true)  }
+  // Check sessionStorage OR already authenticated via AuthContext token
+  const [loggedIn, setLoggedIn] = useState(() =>
+    sessionStorage.getItem('cg-admin') === 'true' || !!token
+  )
+
+  // If token disappears (expired/logged out elsewhere), kick back to login
+  useEffect(() => {
+    if (!token) {
+      sessionStorage.removeItem('cg-admin')
+      setLoggedIn(false)
+    }
+  }, [token])
+
+  const handleLogin = () => {
+    sessionStorage.setItem('cg-admin', 'true')
+    setLoggedIn(true)
+  }
+
   const handleLogout = () => {
     sessionStorage.removeItem('cg-admin')
     logout()
