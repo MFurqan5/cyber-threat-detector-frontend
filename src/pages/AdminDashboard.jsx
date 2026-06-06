@@ -18,7 +18,7 @@ import AnimatedBackground from '../components/ui/AnimatedBackground'
 import { getAdminStats, getAdminHistory, getAdminCacheStatus, loginUser } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 
-const ADMIN_EMAIL    = 'admin@cyberguard.ai'
+const ADMIN_EMAIL = 'admin@cyberguard.ai'
 const ADMIN_PASSWORD = 'admin123'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -81,11 +81,11 @@ const ScanTypeIcon = ({ type }) => {
   const { theme } = useTheme()
   const size = 11
   switch (type?.toLowerCase()) {
-    case 'url':   return <Globe size={size} style={{ color: theme.accent }} />
+    case 'url': return <Globe size={size} style={{ color: theme.accent }} />
     case 'email': return <Mail size={size} style={{ color: theme.warning }} />
-    case 'file':  return <File size={size} style={{ color: theme.accent }} />
-    case 'app':   return <Smartphone size={size} style={{ color: theme.warning }} />
-    default:      return <Globe size={size} style={{ color: theme.accent }} />
+    case 'file': return <File size={size} style={{ color: theme.accent }} />
+    case 'app': return <Smartphone size={size} style={{ color: theme.warning }} />
+    default: return <Globe size={size} style={{ color: theme.accent }} />
   }
 }
 
@@ -240,7 +240,7 @@ const AdminDashboardContent = ({ onLogout }) => {
         const historyData = await getAdminHistory(10, 0, null, false)
         setLiveFeed(historyData?.records || [])
         setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false }))
-      } catch (_) {}
+      } catch (_) { }
     }, 15000)
     return () => clearInterval(interval)
   }, [])
@@ -249,9 +249,17 @@ const AdminDashboardContent = ({ onLogout }) => {
   const s = stats || {}
   const c = cache || {}
 
-  const cacheL1 = c.l1 || { hits: 0, misses: 0, hit_rate: 0 }
-  const cacheL2 = c.l2 || { hits: 0, misses: 0, hit_rate: 0 }
-  const cacheL3 = c.l3 || { hits: 0, misses: 0, hit_rate: 0 }
+  // FIX: Handle different possible response structures from backend
+  const getCacheData = (layer) => {
+    const data = c[layer] || c[layer.toUpperCase()] || c[`${layer}_cache`] || c.data?.[layer] || { hits: 0, misses: 0, hit_rate: 0 }
+    // Ensure hit_rate is a number between 0 and 1
+    if (data.hit_rate > 1) data.hit_rate = data.hit_rate / 100
+    return data
+  }
+
+  const cacheL1 = getCacheData('l1')
+  const cacheL2 = getCacheData('l2')
+  const cacheL3 = getCacheData('l3')
 
   const pieData = (s.threat_distribution || []).map(item => ({
     ...item,
@@ -335,10 +343,10 @@ const AdminDashboardContent = ({ onLogout }) => {
         {/* ── Overview Stats ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: BarChart2,    label: 'Total Scans (24h)',   value: (s.total_scans || 0).toLocaleString(),      color: theme.accent  },
-            { icon: AlertTriangle,label: 'Threats Detected',    value: (s.threats_detected || 0).toLocaleString(), color: theme.danger  },
-            { icon: CheckCircle,  label: 'Safe Results',        value: (s.safe_requests || 0).toLocaleString(),    color: theme.safe    },
-            { icon: Zap,          label: 'Avg Response Time',   value: s.avg_time_ms ? `${s.avg_time_ms}ms` : 'N/A', color: theme.warning },
+            { icon: BarChart2, label: 'Total Scans (24h)', value: (s.total_scans || 0).toLocaleString(), color: theme.accent },
+            { icon: AlertTriangle, label: 'Threats Detected', value: (s.threats_detected || 0).toLocaleString(), color: theme.danger },
+            { icon: CheckCircle, label: 'Safe Results', value: (s.safe_requests || 0).toLocaleString(), color: theme.safe },
+            { icon: Zap, label: 'Avg Response Time', value: s.avg_time_ms ? `${s.avg_time_ms}ms` : 'N/A', color: theme.warning },
           ].map(({ icon: Icon, label, value, color }, i) => (
             <motion.div key={label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
               className="relative overflow-hidden rounded-2xl p-4"
@@ -359,9 +367,9 @@ const AdminDashboardContent = ({ onLogout }) => {
           <SectionTitle icon={Zap} title="Cache Performance" subtitle="Real-time hit rates and request counts per layer" />
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { key: 'l1', label: 'L1 Memory',  color: theme.accent,   data: cacheL1 },
-              { key: 'l2', label: 'L2 Redis',   color: theme.safe,     data: cacheL2 },
-              { key: 'l3', label: 'L3 MongoDB', color: theme.warning,  data: cacheL3 },
+              { key: 'l1', label: 'L1 Memory', color: theme.accent, data: cacheL1 },
+              { key: 'l2', label: 'L2 Redis', color: theme.safe, data: cacheL2 },
+              { key: 'l3', label: 'L3 MongoDB', color: theme.warning, data: cacheL3 },
             ].map(({ key, label, color, data }) => {
               const pct = Math.round((data.hit_rate || 0) * 100)
               return (
@@ -522,10 +530,10 @@ const AdminDashboardContent = ({ onLogout }) => {
             <SectionTitle icon={BarChart2} title="Scans by Type (24h)" subtitle="Breakdown of URL, email, file and app scans" />
             <div className="space-y-3">
               {[
-                { label: 'URL Scans',   value: s.by_type?.url   || 0, color: theme.accent,   icon: Globe },
-                { label: 'Email Scans', value: s.by_type?.email || 0, color: theme.warning,  icon: Mail },
-                { label: 'File Scans',  value: s.by_type?.file  || 0, color: theme.safe,     icon: File },
-                { label: 'App Scans',   value: s.by_type?.app   || 0, color: '#a78bfa',      icon: Smartphone },
+                { label: 'URL Scans', value: s.by_type?.url || 0, color: theme.accent, icon: Globe },
+                { label: 'Email Scans', value: s.by_type?.email || 0, color: theme.warning, icon: Mail },
+                { label: 'File Scans', value: s.by_type?.file || 0, color: theme.safe, icon: File },
+                { label: 'App Scans', value: s.by_type?.app || 0, color: '#a78bfa', icon: Smartphone },
               ].map(({ label, value, color, icon: Icon }) => {
                 const total = (s.total_scans || 1)
                 const pct = Math.round((value / total) * 100)
@@ -554,9 +562,9 @@ const AdminDashboardContent = ({ onLogout }) => {
             <SectionTitle icon={Server} title="System Health" subtitle="Cache layer status based on real response data" />
             <div className="space-y-3">
               {[
-                { name: 'L1 Cache (Memory)',   ok: cacheL1.hits + cacheL1.misses > 0, detail: `${cacheL1.hits.toLocaleString()} hits · ${Math.round(cacheL1.hit_rate * 100)}% rate`, color: theme.accent },
-                { name: 'L2 Cache (Redis)',    ok: cacheL2.hits + cacheL2.misses > 0, detail: `${cacheL2.hits.toLocaleString()} hits · ${Math.round(cacheL2.hit_rate * 100)}% rate`, color: theme.safe },
-                { name: 'L3 Cache (MongoDB)',  ok: cacheL3.hits + cacheL3.misses > 0, detail: `${cacheL3.hits.toLocaleString()} hits · ${Math.round(cacheL3.hit_rate * 100)}% rate`, color: theme.warning },
+                { name: 'L1 Cache (Memory)', ok: cacheL1.hits + cacheL1.misses > 0, detail: `${cacheL1.hits.toLocaleString()} hits · ${Math.round(cacheL1.hit_rate * 100)}% rate`, color: theme.accent },
+                { name: 'L2 Cache (Redis)', ok: cacheL2.hits + cacheL2.misses > 0, detail: `${cacheL2.hits.toLocaleString()} hits · ${Math.round(cacheL2.hit_rate * 100)}% rate`, color: theme.safe },
+                { name: 'L3 Cache (MongoDB)', ok: cacheL3.hits + cacheL3.misses > 0, detail: `${cacheL3.hits.toLocaleString()} hits · ${Math.round(cacheL3.hit_rate * 100)}% rate`, color: theme.warning },
               ].map(({ name, ok, detail, color }) => (
                 <div key={name} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
                   style={{ background: theme.surfaceBg, border: `1px solid ${theme.cardBorder}` }}>
