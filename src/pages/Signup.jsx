@@ -108,7 +108,7 @@ const Signup = () => {
             <Shield size={20} style={{ color: theme.accent }} />
           </div>
           <div>
-            <p className="text-sm font-bold font-display" style={{ color: theme.textPrimary }}>CyberGuard AI</p>
+            <p className="text-sm font-bold font-display" style={{ color: theme.textPrimary }}>CyberSentinel AI</p>
             <p className="text-xs" style={{ color: theme.textMuted }}>Threat Detection Platform</p>
           </div>
         </div>
@@ -134,7 +134,7 @@ const Signup = () => {
           </motion.div>
         </div>
 
-        <p className="text-xs" style={{ color: theme.textMuted }}>© 2025 CyberGuard AI. All rights reserved.</p>
+        <p className="text-xs" style={{ color: theme.textMuted }}>© 2025 CyberSentinel AI. All rights reserved.</p>
       </motion.div>
 
       <div className="hidden lg:block w-px self-stretch my-12 relative z-10" style={{ background: `linear-gradient(to bottom, transparent, ${theme.cardBorder}, transparent)` }} />
@@ -146,13 +146,13 @@ const Signup = () => {
             <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${theme.accent}18`, border: `1px solid ${theme.accent}35` }}>
               <Shield size={18} style={{ color: theme.accent }} />
             </div>
-            <p className="text-sm font-bold font-display" style={{ color: theme.textPrimary }}>CyberGuard AI</p>
+            <p className="text-sm font-bold font-display" style={{ color: theme.textPrimary }}>CyberSentinel AI</p>
           </div>
 
           <div className="rounded-2xl p-8" style={{ background: theme.cardBg, backdropFilter: theme.cardBlur, WebkitBackdropFilter: theme.cardBlur, border: `1px solid ${theme.cardBorder}`, boxShadow: theme.cardShadow }}>
             <div className="mb-7">
               <h2 className="text-2xl font-bold font-display mb-1.5" style={{ color: theme.textPrimary }}>Create account</h2>
-              <p className="text-sm" style={{ color: theme.textMuted }}>Get started with CyberGuard AI today</p>
+              <p className="text-sm" style={{ color: theme.textMuted }}>Get started with CyberSentinel AI today</p>
             </div>
 
             <AnimatePresence>
@@ -178,7 +178,7 @@ const Signup = () => {
                 <label className="block text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: theme.textMuted }}>Email address</label>
                 <div className="relative">
                   <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: focusedField === 'email' ? theme.accent : theme.textMuted }} />
-                  <input type="email" placeholder="analyst@cyberguard.ai" value={form.email} onChange={set('email')} onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)} className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-body" style={inputStyle('email')} autoComplete="email" />
+                  <input type="email" placeholder="analyst@cybersentinel.ai" value={form.email} onChange={set('email')} onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)} className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-body" style={inputStyle('email')} autoComplete="email" />
                 </div>
               </div>
 
@@ -238,7 +238,7 @@ const Signup = () => {
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center justify-center gap-2 mt-5">
             <div className="w-1.5 h-1.5 rounded-full" style={{ background: theme.safe }} />
-            <p className="text-xs" style={{ color: theme.textMuted }}>Protected by CyberGuard AI · TLS 1.3 encrypted</p>
+            <p className="text-xs" style={{ color: theme.textMuted }}>Protected by CyberSentinel AI · TLS 1.3 encrypted</p>
           </motion.div>
         </motion.div>
       </div>

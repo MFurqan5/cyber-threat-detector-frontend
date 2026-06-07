@@ -146,7 +146,7 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [themeId, setThemeId] = useState(() =>
-    localStorage.getItem('cyberguard-theme') || 'dark'
+    localStorage.getItem('cybersentinel-theme') || 'dark'
   )
 
   const theme = themes[themeId]
@@ -154,7 +154,7 @@ export const ThemeProvider = ({ children }) => {
   const toggleTheme = () => {
     const next = themeId === 'dark' ? 'light' : 'dark'
     setThemeId(next)
-    localStorage.setItem('cyberguard-theme', next)
+    localStorage.setItem('cybersentinel-theme', next)
   }
 
   useEffect(() => {

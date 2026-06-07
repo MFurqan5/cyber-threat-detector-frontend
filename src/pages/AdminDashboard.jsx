@@ -18,7 +18,7 @@ import AnimatedBackground from '../components/ui/AnimatedBackground'
 import { getAdminStats, getAdminHistory, getAdminCacheStatus, loginUser } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 
-const ADMIN_EMAIL    = 'admin@cyberguard.ai'
+const ADMIN_EMAIL    = 'admin@cybersentinel.ai'
 const ADMIN_PASSWORD = 'admin123'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ const buildCSV = (records) => {
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url; a.download = `cyberguard-admin-${Date.now()}.csv`; a.click()
+  a.href = url; a.download = `cybersentinel-admin-${Date.now()}.csv`; a.click()
   URL.revokeObjectURL(url)
 }
 
@@ -153,7 +153,7 @@ const AdminLogin = ({ onLogin }) => {
             </div>
             <div className="text-center">
               <h1 className="text-xl font-bold font-display" style={{ color: theme.textPrimary }}>Admin Access</h1>
-              <p className="text-xs mt-0.5" style={{ color: theme.textMuted }}>CyberGuard AI · Restricted Area</p>
+              <p className="text-xs mt-0.5" style={{ color: theme.textMuted }}>CyberSentinel AI · Restricted Area</p>
             </div>
           </div>
 
@@ -171,7 +171,7 @@ const AdminLogin = ({ onLogin }) => {
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: theme.textMuted }}>Admin Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="admin@cyberguard.ai"
+                placeholder="admin@cybersentinel.ai"
                 className="w-full px-4 py-3 rounded-xl text-sm outline-none"
                 style={{ background: theme.inputBg, border: `1px solid ${theme.inputBorder}`, color: theme.textPrimary }} />
             </div>
@@ -300,7 +300,7 @@ const AdminDashboardContent = ({ onLogout }) => {
               <Shield size={16} style={{ color: theme.accent }} />
             </div>
             <div>
-              <span className="text-sm font-bold font-display" style={{ color: theme.textPrimary }}>CyberGuard</span>
+              <span className="text-sm font-bold font-display" style={{ color: theme.textPrimary }}>CyberSentinel</span>
               <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-medium"
                 style={{ background: `${theme.danger}15`, color: theme.danger, border: `1px solid ${theme.danger}30` }}>
                 ADMIN

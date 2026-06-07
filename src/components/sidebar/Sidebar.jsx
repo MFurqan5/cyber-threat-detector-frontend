@@ -45,7 +45,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           {!collapsed && (
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}>
-              <p className="text-sm font-semibold font-display leading-tight whitespace-nowrap" style={{ color: theme.textPrimary }}>CyberGuard</p>
+              <p className="text-sm font-semibold font-display leading-tight whitespace-nowrap" style={{ color: theme.textPrimary }}>CyberSentinel</p>
               <p className="text-xs whitespace-nowrap" style={{ color: theme.textMuted }}>AI Platform</p>
             </motion.div>
           )}

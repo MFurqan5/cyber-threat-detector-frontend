@@ -39,7 +39,7 @@ const exportToPDF = async (rows) => {
   doc.setTextColor(17, 24, 39)
   doc.setFontSize(15)
   doc.setFont('helvetica', 'bold')
-  doc.text('CyberGuard AI — Scan History Report', 64, 26)
+  doc.text('CyberSentinel AI — Scan History Report', 64, 26)
 
   doc.setTextColor(107, 114, 128)
   doc.setFontSize(8)
@@ -144,11 +144,11 @@ const exportToPDF = async (rows) => {
     doc.setFontSize(7.5)
     doc.setTextColor(156, 163, 175)
     doc.setFont('helvetica', 'normal')
-    doc.text('CyberGuard AI Threat Detection Platform', 18, H - 16)
+    doc.text('CyberSentinel AI Threat Detection Platform', 18, H - 16)
     doc.text(`Page ${i} of ${pageCount}`, W - 18, H - 16, { align: 'right' })
   }
 
-  doc.save(`cyberguard-scan-history-${Date.now()}.pdf`)
+  doc.save(`cybersentinel-scan-history-${Date.now()}.pdf`)
 }
 
 // ─── Excel Export ─────────────────────────────────────────────────────────────
@@ -165,7 +165,7 @@ const exportToExcel = async (rows) => {
   ws['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }, { wch: 55 }]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Scan History')
-  XLSX.writeFile(wb, `cyberguard-scan-history-${Date.now()}.xlsx`)
+  XLSX.writeFile(wb, `cybersentinel-scan-history-${Date.now()}.xlsx`)
 }
 
 // ─── Date range picker ────────────────────────────────────────────────────────

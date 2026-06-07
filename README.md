@@ -1,4 +1,4 @@
-# CyberGuard AI — Frontend
+# CyberSentinel AI — Frontend
 
 Premium cybersecurity threat detection dashboard built with React + Vite.
 

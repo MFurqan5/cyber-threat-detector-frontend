@@ -50,7 +50,7 @@ const LandingPage = () => {
           <div style={{ width: 30, height: 30, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${t.accent}18`, border: `1px solid ${t.accent}35` }}>
             <Shield size={15} style={{ color: t.accent }} />
           </div>
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '0.875rem', color: t.textPrimary }}>CyberGuard AI</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '0.875rem', color: t.textPrimary }}>CyberSentinel AI</span>
         </div>
 
         <div className="hidden md:flex" style={{ alignItems: 'center', gap: '2rem' }}>
@@ -244,9 +244,9 @@ const LandingPage = () => {
           <div style={{ width: 26, height: 26, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${t.accent}18`, border: `1px solid ${t.accent}30` }}>
             <Shield size={12} style={{ color: t.accent }} />
           </div>
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '0.825rem', color: t.textPrimary }}>CyberGuard AI</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '0.825rem', color: t.textPrimary }}>CyberSentinel AI</span>
         </div>
-        <p style={{ fontSize: '0.78rem', color: t.textMuted }}>© 2025 CyberGuard AI. All rights reserved.</p>
+        <p style={{ fontSize: '0.78rem', color: t.textMuted }}>© 2025 CyberSentinel AI. All rights reserved.</p>
         <div style={{ display: 'flex', gap: '1.25rem' }}>
           <Link to="/login"  style={{ fontSize: '0.78rem', color: t.textMuted, textDecoration: 'none' }}>Sign In</Link>
           <Link to="/signup" style={{ fontSize: '0.78rem', color: t.textMuted, textDecoration: 'none' }}>Sign Up</Link>
